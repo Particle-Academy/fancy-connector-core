@@ -56,12 +56,12 @@ const VENDORED_PHP_NAMESPACE = "FancyFlow\\Nodes\\Connector";
  * the fix has to land upstream or it is gone at the next build.
  */
 const banner = (source) =>
-  `// GENERATED from @particle-academy/fancy-connectors — ${source}\n` +
+  `// GENERATED from @particle-academy/fancy-connector-core — ${source}\n` +
   `// Do not edit here. Fix it in the package and re-run \`php artisan flow:build\`;\n` +
   `// a test fails the build when this copy and the package disagree.\n`;
 
 const phpBanner = (source) =>
-  `// GENERATED from particle-academy/fancy-connectors — ${source}\n` +
+  `// GENERATED from particle-academy/fancy-connector-core — ${source}\n` +
   `// Do not edit here. Fix it in the package and re-run \`php artisan flow:build\`;\n` +
   `// a test fails the build when this copy and the package disagree.\n`;
 
