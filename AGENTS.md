@@ -197,6 +197,27 @@ rather than remembered:
 
 ---
 
+## The principle underneath three separate rules
+
+**The system must be able to say it does not know, in a way that cannot be read
+as an answer.**
+
+It shows up three times in this package, and it was three separate paragraphs
+that happened to agree until the reference consumer pointed out it is one idea:
+
+| where | "I do not know" | the answer it must not be mistaken for |
+|---|---|---|
+| drift | `unchecked` | `clean` — *we looked and nothing moved* |
+| metrics | the key is **absent** | `0` — *we asked and nothing happened* |
+| rendering | `limit` left as declared | `null` — *this provider imposes no limit* |
+| provider setup | `sandbox: "unverified"` | `"none"` — *there is no test estate* |
+
+Each pair needs opposite actions from whoever reads it, and in each case the
+wrong one is the *confident* one — which is why collapsing them is always the
+tempting simplification and always the expensive one. When you add a field here,
+ask what its value is when nobody has looked yet, and make sure that value is not
+already spoken for.
+
 ## Types that cross a JSON boundary get no help from `tsc`
 
 Every string union a host might mirror ships as **data** too — `SANDBOX_KINDS`,
