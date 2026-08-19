@@ -130,6 +130,13 @@ are the whole contract:
 - **Loss is reported, never applied.** A token too long to fit is a problem on
   the payload. A truncated URL is worse than a refused message, because it looks
   deliberate.
+- **`limit` stays RESOLVABLE PER CONNECTION and must never become static.** A
+  Mastodon instance publishes its own limit; the same connector talks to one
+  allowing 500 and one allowing 5000. Baking it in breaks in the quietest way
+  available — most of a post wasted, or a refusal the preview never showed.
+  `withResolvedLimit()` is the supported way, and `null` is a real answer
+  meaning **uncounted**, distinct from *unknown* — which is not a renderable
+  state at all.
 
 **No length rule outside this module.** A validator and a renderer that both
 judge length will disagree, and the validator will refuse content the renderer
@@ -152,10 +159,22 @@ questions and change on different clocks.
   `sandbox`, `verify`.
   - **`secret` is chosen per field, never inferred from the type.** A Discord
     webhook URL is entirely a secret: it carries its token in the path.
-  - **`VerifyResult.proves`** states what the check does NOT prove. Telegram's
-    `getMe` validates the token and says nothing about whether the bot reached
-    the target chat, which is where everyone gets stuck. A green tick that means
-    more than it should is worse than no tick.
+  - **`proves` states what the check does NOT prove** — on the adapter as well
+    as on each `VerifyResult`, so a surface can say it before anyone runs the
+    check. Telegram's `getMe` validates the token and says nothing about whether
+    the bot reached the target chat, which is where everyone gets stuck. A green
+    tick that means more than it should is worse than no tick.
+  - **`sandbox` has six values, and two of them are answers people skip.**
+    `unverified` means *nobody has checked* — a real state, and the right one
+    until somebody has; forcing a guess on this field is how a workflow gets
+    pointed at a live estate while a person believes it is a test one.
+    `restricted-reach` is the dangerous one: a Meta app in Development Mode or an
+    unaudited TikTok app has the same credentials, the same endpoints and the
+    same estate, with only the AUDIENCE restricted — so it looks exactly like a
+    successful post that nobody can see. It is not `none`, and folding it in
+    loses the only thing worth saying about it.
+  - `providerProblems()` reports both, plus a `verify` with no `proves` and a
+    `restricted-reach` provider whose summary never mentions reach.
 - **`Connector`** — what calling it involves. `capabilities`, `delivery`,
   `metricShape?`, `validate`, `render?`/`renderRules?`, `call`, `fetchMetrics?`,
   `fetchFeedback?`.
@@ -177,6 +196,26 @@ rather than remembered:
   A zero says "nothing happened"; an absence says "we don't know".
 
 ---
+
+## Types that cross a JSON boundary get no help from `tsc`
+
+Every string union a host might mirror ships as **data** too — `SANDBOX_KINDS`,
+`CREDENTIAL_SCOPES`, `PROBLEM_SEVERITIES`, `CANONICAL_METRICS`.
+
+The reason is a real near-miss. When `CredentialField.scope` was renamed from
+`app`/`brand` to `provider`/`account`, a consumer re-declaring the field shape on
+its own client **kept compiling** — the rename crossed a JSON boundary the
+compiler cannot follow, so their `scope === "brand"` silently became never-true
+and every credential field would have rendered as shared. Nothing failed; it just
+stopped being right.
+
+So a host validates against the exported array at the boundary where the
+compiler stops. PHP has this for free: an enum is runtime data, and
+`SandboxKind::tryFrom($value)` fails loudly on a name nobody serves any more.
+
+**When you add or rename a value in a union here, update its array in the same
+commit** — and prefer adding a value to renaming one, because a rename is
+invisible to exactly the consumers who were most careful about types.
 
 ## Probes
 

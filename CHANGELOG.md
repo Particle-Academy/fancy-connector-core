@@ -8,6 +8,81 @@ version number is not a promise it can keep yet; the entries below are.
 
 ## [Unreleased]
 
+## [0.2.0] — unreleased
+
+The reference consumer migrated five adapters onto `0.1.0`, ran its acceptance
+suite, and filed four findings. All four were cases where the type or the
+classifier was *safe* and still *wrong* — the hardest kind to notice from inside,
+because nothing fails.
+
+### Fixed
+
+- **`classifyError` ignored the classification `httpFailure` attached.** It
+  re-derived from scratch, found no error code, and answered `ambiguous`
+  ("nobody can tell") for a `400` the provider had been explicit about.
+  **This was never a retry bug** — `deliver()` reads `error.classified` first and
+  only falls back — but a host that calls the exported classifier directly, which
+  is a reasonable thing to do, was told nobody could tell. The **PHP twin already
+  did this**, so the two runtimes disagreed. **What a consumer must do: nothing,
+  unless you asserted the old answer.** If you pinned `classifyError` on an
+  `httpFailure` to `ambiguous`, that assertion now reads `rejected` or
+  `refused-explicitly` — which is the answer you wanted.
+
+### Changed
+
+- **BREAKING (types only): `ChainRef` is `object`, was
+  `Record<string, string | number>`.** An ordinary interface does not satisfy an
+  index signature unless it declares one, so `interface PostRef { uri; cid }` did
+  **not** satisfy the old constraint — and the only other fix was to add an index
+  signature to a type used across a codebase in order to please a generic used in
+  one place. The reference consumer worked around it with `postChain<T & ChainRef>`
+  and two `as unknown as` casts, and could not use `ChainOutcome<T>` in its own
+  signatures at all. **What a consumer must do: delete the casts.** A constraint
+  everyone casts past is not enforcing anything.
+
+### Added
+
+- **`SandboxKind` gained `restricted-reach`** — the fifth shape, and the
+  dangerous one. A Meta app in Development Mode, an unaudited TikTok app that can
+  only post `SELF_ONLY`: same credentials, same endpoints, same estate, and only
+  the **audience** restricted. That is none of the previous four, and `none` —
+  which is what it was being forced into — is actively wrong. It is the shape
+  most likely to be mistaken for a sandbox, because it looks exactly like a
+  successful post that nobody can see: `ok: true`, a real id, no audience.
+- **`SandboxKind` gained `unverified`** — *nobody has checked yet*. A real state,
+  and the type has to carry it: this is the field where being wrong sends someone
+  to a live estate believing it is a test one, so "researched but not verified"
+  must not be forced to pick one of the other five. A comment saying so is not a
+  type.
+- **`sandboxIsSelectable()` / `sandboxRefusal()`** (`SandboxKind::isSelectable()`
+  / `->refusal()` in PHP). Auto-resolution no longer picks "sandbox" for anything
+  that cannot be selected, and each refusal explains **its own** reason —
+  collapsing the three into "no sandbox available" would hide the one that
+  matters.
+- **`providerProblems()`** — the sibling of `capabilityProblems()`, one level up.
+  Reports `implemented: true` with `sandbox: "unverified"`, a `verify` that does
+  not say what it **proves**, a `restricted-reach` provider whose summary never
+  mentions reach, and empty fields or setup on something claimed to be
+  implemented.
+- **`ProviderAdapter.proves`** — what a verify does NOT cover, declared on the
+  adapter as well as on each result, so a surface can say it *before* anyone runs
+  the check.
+- **`withResolvedLimit(rules, limit)`** — the supported way to resolve a
+  per-connection limit. A Mastodon instance publishes its own `max_toot_chars`;
+  baking a limit into a connector renders to 500 on an instance allowing 5000, or
+  to 5000 on one allowing 500, and both fail silently. `undefined` keeps the
+  declared limit, because *"I did not look"* is not *"there is no limit"* — and
+  `null` is a real answer meaning **uncounted**.
+- **`CREDENTIAL_SCOPES`, `SANDBOX_KINDS`, `PROBLEM_SEVERITIES`,
+  `CANONICAL_METRICS`** — every string union that crosses a JSON boundary now
+  ships as **data** as well as a type. The compiler cannot follow a type across
+  JSON: when `scope` was renamed from `app`/`brand`, a consumer re-declaring the
+  field shape on its client kept compiling and its `scope === "brand"` silently
+  became never-true, so every credential field would have rendered as shared.
+  (PHP had this for free — an enum is runtime data, and `tryFrom` fails loudly on
+  a value nobody serves any more.)
+
+
 ## [0.1.0] — unreleased
 
 First cut. Extracted and generalised from the `_connector` shared runtime in the
@@ -99,5 +174,6 @@ clock; this package is the runtime it is written on.
   satisfies it with no dependency in either direction and a host that has never
   heard of a workflow engine can implement it.
 
-[Unreleased]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Particle-Academy/fancy-connector-core/releases/tag/v0.1.0
