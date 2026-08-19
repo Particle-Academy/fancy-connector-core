@@ -212,11 +212,19 @@ that happened to agree until the reference consumer pointed out it is one idea:
 | rendering | `limit` left as declared | `null` — *this provider imposes no limit* |
 | provider setup | `sandbox: "unverified"` | `"none"` — *there is no test estate* |
 
-Each pair needs opposite actions from whoever reads it, and in each case the
-wrong one is the *confident* one — which is why collapsing them is always the
-tempting simplification and always the expensive one. When you add a field here,
-ask what its value is when nobody has looked yet, and make sure that value is not
-already spoken for.
+Each pair needs opposite actions from whoever reads it, and **in every case the
+wrong reading is the reassuring one**: a zero read as "nobody engaged" when it
+meant "nobody asked"; a `clean` read as "the API is stable" when it meant "the
+spec has not moved since 2021"; a `none` read as "no test estate" when it meant
+"nobody checked".
+
+That asymmetry is why this needs a **type** and not a convention. A person under
+time pressure will take the reassuring reading every time, and be right often
+enough to keep doing it — so the only reliable defence is a value that cannot be
+read the reassuring way at all.
+
+When you add a field here, ask what its value is when nobody has looked yet, and
+make sure that value is not already spoken for.
 
 ## Types that cross a JSON boundary get no help from `tsc`
 

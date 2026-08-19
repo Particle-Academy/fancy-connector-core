@@ -165,6 +165,31 @@ wrong.
 
 ---
 
+## Depend on this with an open range, not a caret
+
+```jsonc
+// package.json
+"@particle-academy/fancy-connector-core": ">=0.2.0 <2.0.0"
+```
+```jsonc
+// composer.json
+"particle-academy/fancy-connector-core": ">=0.2.0 <2.0.0"
+```
+
+**Not `^0.2.0`.** A caret on a `0.x` locks the MINOR — npm and Composer both read
+`^0.2.0` as `>=0.2.0 <0.3.0` — so the next release is out of range and
+**`npm update` reports success having installed nothing.** A resolver quietly
+keeping the old version is indistinguishable from a resolver that had nothing to
+do, which is why this is worth stating rather than leaving to convention.
+
+This package intends the open range: **pre-1.0 minors may change what a connector
+sees, and `CONNECTOR_API_VERSION` is what tells you when** — loudly, at
+registration, naming which side is behind. That is a stronger guarantee than a
+caret gives you, and it is the reason the caret is not needed here.
+
+The first consumer of this package pinned `^0.1.0` and would have missed 0.2.0
+entirely. That is the whole argument.
+
 ## Documentation
 
 - [`AGENTS.md`](./AGENTS.md) — the invariants, the traps, and what a change here
