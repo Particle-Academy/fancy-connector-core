@@ -1,6 +1,6 @@
 {
   "name": "@particle-academy/fancy-connector-core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "The runtime under every Fancy connector: modes and estates, connections, one call path, a failure taxonomy that separates \"it never arrived\" from \"nobody can tell\", deterministic fakers, webhook verification, pure versioned rendering, declared metric shapes, credential-free probes, and API-drift reporting. Owns the wire; never the gates.",
   "repository": {
     "type": "git",

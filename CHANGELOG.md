@@ -6,6 +6,32 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.3.1] - 2026-08-20
+
+### Fixed
+
+- **`CallOptions.mode` accepts `"auto"`.** It was typed `ConnectorMode`
+  (`"fake" | "sandbox" | "live"`) while the value is handed straight to
+  `resolveConnection`, which takes `RequestedMode`, and `resolveConnectorMode`
+  gates on `requested && requested !== "auto"`. So `"auto"` was fully handled at
+  RUNTIME and rejected by the TYPE.
+
+  Not a corner case: `"auto"` is the `defaultConfig` of every connector node, so
+  the most common value a caller holds was the one it could not pass. The reason
+  it stayed hidden is that the workaround — omitting `mode` — is exactly
+  equivalent, because `null`, `undefined` and `"auto"` all take the same branch.
+  Nothing failed; it just could not be written.
+
+  **What a consumer must DO:** nothing. This is a widening, so every call that
+  compiled before still compiles. If you were omitting `mode` to route around
+  it, you can now pass `"auto"` explicitly, which says what you meant.
+
+  A test now pins the three-way equivalence, so if `null`, `undefined` and
+  `"auto"` ever stop meaning the same thing that is a failure rather than a
+  connector silently choosing a different estate.
+
+  Reported by Weaver, found by compiling against the published artifact.
+
 ## [0.3.0] - 2026-08-19
 
 ### Fixed
