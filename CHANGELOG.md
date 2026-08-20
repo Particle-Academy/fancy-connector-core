@@ -6,6 +6,43 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.3.0] - 2026-08-19
+
+### Fixed
+
+- **`ECONNRESET` and `EPIPE` are `ambiguous`, not `unreachable`. This was a live
+  duplicate-send hazard.** Both were listed as codes proving the request never
+  left. They do not. A peer sends RST whenever it tears the connection down,
+  *including after it has received and acted on the request but before the
+  response comes back*; `EPIPE` is the same story from our side. Node surfaces
+  the safe case and the unsafe case as the same code, so the code cannot carry
+  the claim.
+
+  Because `shouldRetry` returns true for `unreachable` **without consulting
+  `idempotent`**, a reset produced up to three sends of a connector that had
+  explicitly declared `idempotent: false`. For a consumer publishing to social
+  networks that is a second public post that cannot be withdrawn.
+
+  This is the same defect as the 5xx / thrown-transport split fixed earlier, and
+  it contradicted this module's own stated rule -- *"an unknown failure treated
+  as unreachable would be retried, and the one thing worse than a lost send is
+  two sends nobody approved."* The two codes were standing exceptions to a rule
+  that should have covered them.
+
+  **What a consumer must DO:** nothing, if your connectors declare `idempotent`
+  honestly -- the fix only removes retries that were never safe. If you have a
+  connector marked `idempotent: true` that is not actually safe to repeat, this
+  release does not save you; that field is still load-bearing. If you were
+  relying on resets being retried for a genuinely idempotent connector, they
+  still are: `ambiguous` retries when `idempotent: true`.
+
+  `ECONNREFUSED`, `ENOTFOUND`, `EAI_AGAIN`, `EHOSTUNREACH` and `ENETUNREACH`
+  stay `unreachable` -- they do prove nothing was delivered -- and a test now
+  pins them there so the fix cannot overcorrect.
+
+  Found by a consumer's conformance fixture disagreeing with the core on its
+  first run, with a reproduction.
+
 ## [Unreleased]
 
 ## [0.2.0] — unreleased

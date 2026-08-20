@@ -36,7 +36,9 @@ const NOT_IDEMPOTENT: RetryPolicy = { ...IDEMPOTENT, idempotent: false };
 test("a request that never left is unreachable", () => {
   assert.equal(classifyError(coded("ECONNREFUSED")).kind, "unreachable");
   assert.equal(classifyError(coded("ENOTFOUND")).kind, "unreachable");
-  assert.equal(classifyError(coded("ECONNRESET")).kind, "unreachable");
+  // ECONNRESET was asserted here until 0.3.0 and was wrong on this test's own
+  // terms: a reset does not mean the request never left. See
+  // tests/reset-is-ambiguous.test.ts.
 });
 
 test("a timeout is AMBIGUOUS, not transient", () => {
