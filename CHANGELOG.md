@@ -6,6 +6,48 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.4.0] - 2026-09-12
+
+### Fixed
+
+- **An idempotency key was fitted to the catalogue CEILING, never to the
+  provider's own limit.** `MAX_KEY_LENGTH` / `MAX_IDEMPOTENCY_KEY_LENGTH` is 255
+  — the widest any provider in the catalogue accepts. A provider declares its
+  own, and the connector index carries it as `idempotencyMaxLength`; Discord's
+  `discord_message` declares **25**.
+
+  So a legitimate engine-derived key — `lane_<16 hex>:subject`, 29 characters —
+  came back unshortened and the connector's own validation refused it:
+  `message_create: idempotencyKey must be at most 25 characters`. The run failed
+  at the node, and the only workaround available to a host was choosing a
+  shorter run identity, which is a workflow-authoring decision being forced by a
+  string length in a library.
+
+  The subtle part is that nothing was malformed: the key was correct and the
+  validation was correct. This package simply never asked how long the key was
+  allowed to be.
+
+  `keyFor(..., maxLength:)` in PHP and `{ maxLength }` in `IdempotencyOptions`
+  now carry the provider's limit, and the smaller of it and the ceiling always
+  applies — a descriptor claiming more than any provider accepts is one to
+  distrust, not obey. The digest still makes the shortened key **stable across
+  attempts**, which is the entire point of one: a key that varied per attempt
+  would defeat the dedupe it exists to provide.
+
+  A limit too small to carry `<head>~<digest>` yields the digest alone. That
+  loses the greppable prefix, which is a real cost — but a key that is hard to
+  trace still dedupes, while the alternative is a negative slice length.
+
+  **Both runtimes had this, identically**, so the parity suite comparing them
+  stayed green throughout. Agreement is not correctness, and that is the whole
+  reason this needed an outside report to surface: it came from the connector
+  lab, which hit it on Discord and worked around it by keeping its run key
+  artificially short.
+
+  Not a breaking change — the parameter is optional and omitting it preserves
+  the previous behaviour exactly. It lands as a MINOR because callers that
+  should pass a limit now can, and the connector emitters will.
+
 ## [0.3.1] - 2026-08-20
 
 ### Fixed

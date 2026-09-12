@@ -172,3 +172,67 @@ it('shortens an over-long key deterministically, keeping the prefix greppable', 
         ->and($key)->toStartWith('run-1:deep-subflow-node-id')
         ->and($key)->toBe(Idempotency::keyFor($long, 'charge'), 'and it is stable');
 });
+
+/**
+ * A key is fitted to the PROVIDER'S limit, not only the catalogue ceiling.
+ *
+ * ## The defect
+ *
+ * `fit()` clamped at `MAX_KEY_LENGTH = 255`, which is the widest any provider in
+ * the catalogue accepts — a ceiling, not a limit. A provider declares its own,
+ * and the connector index carries it as `idempotencyMaxLength`. Discord's
+ * `discord_message` declares **25**.
+ *
+ * So `keyFor()` handed back a perfectly legitimate engine-derived key —
+ * `lane_<16 hex>:subject`, 29 characters — and the connector's own validation
+ * refused it: "idempotencyKey must be at most 25 characters". The run failed at
+ * the node, and a host had no way to fix it short of choosing a shorter run
+ * identity, which is a workflow-authoring decision being forced by a string
+ * length in a library.
+ *
+ * The wrong half is subtle: the key was not malformed and the validation was not
+ * wrong. This package simply never asked how long the key was allowed to be.
+ *
+ * Reported by the connector lab, which hit it on Discord and worked around it by
+ * keeping its run key artificially tiny.
+ *
+ * ## The same bug is in the TypeScript twin
+ *
+ * Both runtimes clamp at their own catalogue ceiling and neither takes a
+ * provider limit, so a parity suite comparing them stays green — agreement is
+ * not correctness, and a shared fixture table is the only thing that would have
+ * caught this pair.
+ */
+it('fits a key to the provider limit when one is given', function (): void {
+    // The engine's real run key shape: `lane_` plus 16 hex.
+    $identity = new ForeignIdentity('lane_0123456789abcdef');
+
+    $unbounded = Idempotency::keyFor($identity, 'subject');
+
+    // The key the engine legitimately produces today, and the one Discord rejects.
+    expect(strlen((string) $unbounded))->toBeGreaterThan(25);
+
+    $fitted = Idempotency::keyFor($identity, 'subject', maxLength: 25);
+
+    expect(strlen((string) $fitted))->toBeLessThanOrEqual(25);
+});
+
+it('keeps a fitted key stable across attempts, which is the whole point of one', function (): void {
+    $first = new ForeignIdentity('lane_0123456789abcdef', attempt: 1);
+    $retry = new ForeignIdentity('lane_0123456789abcdef', attempt: 7, firstAttemptAt: gmdate('Y-m-d\TH:i:s\Z'));
+
+    // A shortened key that changed between attempts would defeat the dedupe it
+    // exists to provide — the retry would write a second time.
+    expect(Idempotency::keyFor($first, 'subject', maxLength: 25))
+        ->toBe(Idempotency::keyFor($retry, 'subject', maxLength: 25));
+});
+
+it('never lets a provider limit widen the catalogue ceiling', function (): void {
+    $identity = new ForeignIdentity(str_repeat('x', 400));
+
+    // A descriptor claiming more than any provider accepts is a descriptor to
+    // distrust, not to obey. The smaller of the two always wins.
+    $key = Idempotency::keyFor($identity, 'subject', maxLength: 10_000);
+
+    expect(strlen((string) $key))->toBeLessThanOrEqual(Idempotency::MAX_KEY_LENGTH);
+});
