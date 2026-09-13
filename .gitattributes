@@ -1,0 +1,13 @@
+# Line endings are pinned rather than left to a clone's `core.autocrlf`.
+#
+# Two concrete reasons:
+#
+#  1. `pint --test` (in CI) enforces LF. A Windows checkout with
+#     core.autocrlf=true materialises every file as CRLF, so pint failed on nearly
+#     every PHP file locally while CI, on Linux, saw LF and failed on three --
+#     a local check that disagrees with CI gets ignored.
+#  2. `scripts/vendor.mjs` copies the working-tree bytes into the flow-node
+#     marketplace's `_connector/` and `--check` compares them byte-for-byte.
+#     Generated from a CRLF checkout, the copy differs from one generated on
+#     Linux with no source change at all.
+* text=auto eol=lf

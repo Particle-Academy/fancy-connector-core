@@ -67,5 +67,11 @@ jobs:
       - name: Install
         run: composer install --no-interaction --prefer-dist
 
+      # Pint is already a dev dependency and `composer lint` already ran it,
+      # but nothing CALLED it, so three files drifted unnoticed. A style rule
+      # that only exists in a composer script is a rule nobody is held to.
+      - name: Style (pint)
+        run: vendor/bin/pint --test
+
       - name: Test
         run: vendor/bin/pest

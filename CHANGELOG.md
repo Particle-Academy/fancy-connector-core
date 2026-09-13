@@ -6,6 +6,22 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [Unreleased]
+
+### Changed
+
+- **CI now runs `pint --test` on the PHP tree**, and the tree passes it. Pint
+  was already a dev dependency and `composer lint` already called it, but no
+  workflow did, so three files had drifted (`RenderRules.php`,
+  `ServiceDescriptor.php`, `Socialite/SocialiteBridge.php`) — formatting only,
+  no behaviour change.
+- **Line endings are pinned to LF in `.gitattributes`.** A Windows clone with
+  `core.autocrlf=true` checked every file out as CRLF, which made `pint --test`
+  fail on nearly every PHP file locally while CI saw three, and made
+  `scripts/vendor.mjs` generate a `_connector/` copy whose bytes depended on
+  the machine it ran on. **What a consumer must DO: nothing** — the published
+  files were already LF; only a checkout of this repository changes.
+
 ## [0.5.0] - 2026-09-13
 
 ### Fixed
