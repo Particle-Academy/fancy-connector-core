@@ -34,6 +34,7 @@ import {
   classifyError,
   classifyStatus,
   isUnconditionallyRetryable,
+  type Attempt,
   type Classified,
   type FailureKind,
 } from "./delivery";
@@ -56,6 +57,21 @@ export class ConnectorError extends Error {
   readonly status?: number;
 
   readonly providerCode?: string;
+
+  /**
+   * Every failed attempt of the call, in order. Set on the error a call throws
+   * (`callConnector`), absent on one built anywhere else.
+   *
+   * `declare`, not a field: it is attached with `Object.defineProperty` when the
+   * call gives up, so an error that did not end a call carries no such property.
+   */
+  declare readonly attempts?: Attempt[];
+
+  /**
+   * What the call declared. With `attempts`, it separates "never allowed to
+   * retry" from "retries ran out". Same presence rule as `attempts`.
+   */
+  declare readonly idempotent?: boolean;
 
   /**
    * What kind of failure this is. The primitive every retry decision reads.

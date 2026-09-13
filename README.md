@@ -84,10 +84,8 @@ try {
   error.kind;          // the retry primitive
   error.providerCode;  // only where the service declared `providerCodeFrom`
   error.cause;         // the classified error; for a thrown transport, the original below it
-  // Set at runtime but not declared on the `ConnectorError` type, so read them
-  // through a narrowing of your own:
-  (error as { attempts?: Attempt[] }).attempts;       // every failed attempt of the call, in order
-  (error as { idempotent?: boolean }).idempotent;     // what the call declared — "never allowed to retry" vs "retries ran out"
+  error.attempts;      // every failed attempt of the call, in order
+  error.idempotent;    // what the call declared — "never allowed to retry" vs "retries ran out"
 }
 ```
 

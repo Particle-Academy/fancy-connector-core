@@ -6,6 +6,17 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.6.1] - 2026-09-13
+
+### Fixed
+
+- **`ConnectorError` declares `attempts` and `idempotent` on its type.** A failed
+  call has attached both since 0.5.0, but the class never declared them, so
+  TypeScript refused `error.attempts` and the README taught a cast. They are
+  `declare` fields: nothing changes at runtime, and an error that did not end a
+  call still has no such property. **What to do:** nothing; a cast you added
+  still compiles and can go.
+
 ## [0.6.0] - 2026-09-13
 
 Additive only. **What a consumer must DO: nothing** — see each entry.
