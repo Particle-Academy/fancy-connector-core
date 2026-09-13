@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ParticleAcademy\Connectors\Socialite;
 
+use Laravel\Socialite\Contracts\User;
+use Laravel\Socialite\Facades\Socialite;
 use ParticleAcademy\Connectors\Mode;
 use ParticleAcademy\Connectors\ResolvedConnection;
 
@@ -49,8 +51,8 @@ final class SocialiteBridge
     /** True when the host actually has Socialite installed. */
     public static function available(): bool
     {
-        return class_exists(\Laravel\Socialite\Facades\Socialite::class)
-            || interface_exists(\Laravel\Socialite\Contracts\User::class);
+        return class_exists(Socialite::class)
+            || interface_exists(User::class);
     }
 
     /**
