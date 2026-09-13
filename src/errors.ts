@@ -65,8 +65,16 @@ export class ConnectorError extends Error {
    */
   readonly kind: FailureKind = "ambiguous";
 
-  constructor(message: string, ctx: ConnectorErrorContext) {
-    super(message);
+  /**
+   * `options.cause` is the standard `Error` cause — what this error was built
+   * from. A failed call's error carries the classified error there, and a thrown
+   * transport's carries the original exception, so nothing below is lost when
+   * the message is rewritten for a person.
+   */
+  constructor(message: string, ctx: ConnectorErrorContext, options?: ErrorOptions) {
+    // Only pass options that HAVE a cause: `{ cause: undefined }` still installs
+    // an own `cause` property, which reads as "caused by undefined".
+    super(message, options?.cause === undefined ? undefined : { cause: options.cause });
     this.name = new.target.name;
     this.service = ctx.service;
     this.operation = ctx.operation;
@@ -114,8 +122,8 @@ export class ConnectorRateLimited extends ConnectorError {
   /** Seconds to wait, when the provider said. */
   readonly retryAfter?: number;
 
-  constructor(message: string, ctx: ConnectorErrorContext & { retryAfter?: number }) {
-    super(message, ctx);
+  constructor(message: string, ctx: ConnectorErrorContext & { retryAfter?: number }, options?: ErrorOptions) {
+    super(message, ctx, options);
     this.retryAfter = ctx.retryAfter;
   }
 
@@ -216,9 +224,12 @@ export function classifyThrown(cause: unknown, ctx: ConnectorErrorContext): Conn
   const classified = classifyError(cause);
   const message = `${ctx.service}.${ctx.operation}: ${classified.detail}`;
 
+  // The original goes on as `cause`, as the PHP twin has always passed it as
+  // `$previous`: a Node error code or an undici stack is exactly what someone
+  // debugging an ambiguous failure needs, and the message keeps only its text.
   return classified.kind === "unreachable"
-    ? new ConnectorUnreachable(message, ctx)
-    : new ConnectorAmbiguous(message, ctx);
+    ? new ConnectorUnreachable(message, ctx, { cause })
+    : new ConnectorAmbiguous(message, ctx, { cause });
 }
 
 /**

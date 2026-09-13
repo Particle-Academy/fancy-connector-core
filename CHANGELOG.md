@@ -6,6 +6,98 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.5.0] - 2026-09-13
+
+### Fixed
+
+- **A failed call arrived with no HTTP status, in both runtimes, on every
+  host.** `classifyHttp()` / `HttpErrors::classify()` built the right error — a
+  `ConnectorAuthError` with `status: 401` — and `deliver()` read its
+  classification and dropped it: a `DeliveryOutcome` carried `attempts`,
+  `gaveUp` and `kind`, never the error. So `failureFrom()` rebuilt the thrown
+  error from the call context alone. The message still quoted the `401`; the
+  `status` field was empty.
+
+  It surfaced in `fancy-connectors`' scheduled Drift workflow, which asks each
+  real provider to refuse an impossible credential and reads `error.status` to
+  see the refusal. Bluesky, Mastodon and Telegram answered `401` and Discord
+  `404` — exactly right — and all four probes reported *"the request failed
+  before any status arrived"*, on all 25 runs since the workflow was added.
+
+  A failed call now keeps what the provider said: **`status`**,
+  **`providerCode`** (see Added), and the classified error itself as the
+  standard **`cause`** (TS) / **`getPrevious()`** (PHP). Unchanged: the message,
+  including the *go and look* wording of an ambiguous refusal, `kind`,
+  `retryable`, and, in TypeScript, `attempts` and `idempotent`. Retry decisions
+  are untouched — they read `kind`, which was always right.
+
+  **What a consumer must DO: nothing**, unless you relied on `status` being
+  empty (a host that read "no status" as "the provider never answered" now sees
+  the number it should always have seen), or on the class — see Changed.
+
+### Changed
+
+- **The thrown class is now the one the failure was classified as**, in both
+  runtimes, and the two runtimes now agree. A `401`/`403` throws
+  `ConnectorAuthError` / `ConnectorAuthException`, a `429` throws
+  `ConnectorRateLimited` / `ConnectorRateLimitedException` carrying the
+  provider's `retryAfter`, and every other failure throws the class its `kind`
+  names: `ConnectorTransient`, `ConnectorRequestError`, `ConnectorUnreachable`,
+  `ConnectorAmbiguous` (and their `*Exception` twins).
+
+  Why the specific class rather than status on a generic one: the table at the
+  top of `errors.ts` / `ConnectorException.php` is the taxonomy's documented
+  promise, and a host catching `ConnectorAuthError` to send someone to
+  re-authenticate never received one from a call. `kind` cannot express that
+  distinction — a rejected credential and a malformed request are both
+  `rejected`, a throttle and a 5xx are both `refused-explicitly` — so it has to
+  come from the classified error. And the two runtimes already disagreed:
+  TypeScript threw a bare `ConnectorError`, PHP mapped by kind and so threw a
+  `ConnectorRequestException` for a rejected credential and a
+  `ConnectorTransientException` for a throttle, losing `retryAfter`.
+
+  - **TypeScript — what to DO: nothing**, unless you compared
+    `error.name === "ConnectorError"` or `error.constructor === ConnectorError`.
+    Every new class extends `ConnectorError`, so `instanceof ConnectorError`
+    still matches; use that. A 2xx whose body is not JSON now throws
+    `ConnectorRequestError` (same `kind`, `rejected`), as PHP always did.
+  - **PHP — BREAKING for one catch shape.** The exception classes are `final`
+    siblings, so `catch (ConnectorRequestException)` written to see a rejected
+    credential, or `catch (ConnectorTransientException)` written to see a
+    throttle, **no longer catches it**. Add `ConnectorAuthException` /
+    `ConnectorRateLimitedException` to that clause, or catch
+    `ConnectorException` and branch on `kind()` / `status`. A clause catching
+    `ConnectorException` needs nothing.
+
+  The Fancy-Friends connector packages were checked before release: none
+  catches these classes or reads `status`; they surface the message, which is
+  unchanged.
+
+### Added
+
+- **`ServiceDescriptor.providerCodeFrom`** (both runtimes) — where a provider
+  puts its OWN error code on a failed response, carried as
+  `error.providerCode`. **Declared per service, never guessed**: Bluesky's
+  `error` is a code (`"AuthenticationRequired"`), Mastodon's `error` is a
+  sentence, Discord's code is an integer under `code`. A generic reader would
+  publish Mastodon's sentence as a code. Undeclared, `providerCode` is absent.
+  A string or an integer is carried; a blank string, anything else, or a
+  **throw** leaves it absent — a reader choking on an HTML error page never
+  turns an explicit `401` into an unclassified failure. Optional; nothing a
+  connector declares has to change, so `CONNECTOR_API_VERSION` stays `1`.
+
+  Before this, `providerCode` existed on both error classes and nothing
+  anywhere set it.
+- **`DeliveryOutcome.error`** — the last failure as it was thrown, absent when
+  the call worked.
+- TypeScript: `ConnectorError` and `ConnectorRateLimited` take a standard
+  `ErrorOptions` third argument (`{ cause }`), and `classifyThrown()` now chains
+  the original transport error as `cause`, as the PHP twin always passed it as
+  `$previous`.
+- PHP: `ConnectorRateLimitedException` takes a trailing `?Throwable $previous`,
+  and `HttpErrors::classify()` a trailing `?string $providerCode`. Both are
+  appended and optional.
+
 ## [0.4.0] - 2026-09-12
 
 ### Fixed

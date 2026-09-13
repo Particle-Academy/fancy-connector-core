@@ -230,6 +230,7 @@ final class Delivery
                             ? self::AMBIGUOUS_REFUSAL.' ('.$classified->detail.')'
                             : $classified->detail,
                         $classified->kind,
+                        $error,
                     );
                 }
 
@@ -242,6 +243,7 @@ final class Delivery
                         $attempts,
                         "Gave up after {$attempt} attempts. {$classified->detail}",
                         $classified->kind,
+                        $error,
                     );
                 }
 

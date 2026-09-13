@@ -16,13 +16,20 @@ use Throwable;
  */
 final class HttpErrors
 {
-    /** Classify an HTTP response into the taxonomy. */
+    /**
+     * Classify an HTTP response into the taxonomy.
+     *
+     * @param  string|null  $providerCode  the provider's own error code, when the service
+     *                                     declared where to read it — see
+     *                                     {@see ServiceDescriptor::$providerCodeFrom}
+     */
     public static function classify(
         int $status,
         string $service,
         string $operation,
         string $body,
         ?int $retryAfter = null,
+        ?string $providerCode = null,
     ): ConnectorException {
         $detail = trim($body) === '' ? '' : ' — '.self::truncate($body, 400);
         $where = $service.'.'.$operation;
@@ -33,7 +40,7 @@ final class HttpErrors
                 $service,
                 $operation,
                 $status,
-                null,
+                $providerCode,
                 $retryAfter,
             );
         }
@@ -46,6 +53,7 @@ final class HttpErrors
                 $service,
                 $operation,
                 $status,
+                $providerCode,
             );
         }
 
@@ -55,6 +63,7 @@ final class HttpErrors
                 $service,
                 $operation,
                 $status,
+                $providerCode,
             );
         }
 
@@ -63,6 +72,7 @@ final class HttpErrors
             $service,
             $operation,
             $status,
+            $providerCode,
         );
     }
 

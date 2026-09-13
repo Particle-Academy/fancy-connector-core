@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ParticleAcademy\Connectors;
 
+use Throwable;
+
 /**
  * The provider asked us to slow down. It did nothing, and said so.
  *
@@ -21,8 +23,9 @@ final class ConnectorRateLimitedException extends ConnectorException
         ?string $providerCode = null,
         /** Seconds to wait, when the provider said. */
         public readonly ?int $retryAfter = null,
+        ?Throwable $previous = null,
     ) {
-        parent::__construct($message, $service, $operation, $status, $providerCode);
+        parent::__construct($message, $service, $operation, $status, $providerCode, $previous);
     }
 
     public function kind(): FailureKind

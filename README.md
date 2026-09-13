@@ -71,6 +71,28 @@ shouldRetry(classifyError(err).kind, { idempotent: connector.delivery.idempotent
 `Idempotency-Key`, or the absence of one — because `idempotent: true` is the one
 claim whose failure is a public duplicate.
 
+### What a failed call carries
+
+The error a host catches is the class the failure was classified as, and it keeps
+what the provider said:
+
+```ts
+try {
+  await callConnector(service, options);
+} catch (error) {
+  if (error instanceof ConnectorAuthError) error.status;  // 401 or 403
+  error.kind;          // the retry primitive
+  error.providerCode;  // only where the service declared `providerCodeFrom`
+  error.cause;         // the classified error; for a thrown transport, the original below it
+}
+```
+
+PHP is the same: `ConnectorAuthException`, `->status`, `->providerCode`,
+`->getPrevious()`. A provider's own error code is read only where its
+`ServiceDescriptor` says where it lives (`providerCodeFrom`) — Bluesky's `error`
+is a code and Mastodon's `error` is a sentence, so a guess would be wrong in the
+most plausible way available.
+
 ---
 
 ## Text, and two one-line bugs that ASCII hides

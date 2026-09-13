@@ -88,6 +88,17 @@ full answer.
 re-sends every earlier segment when a later one fails, turning a partial send
 into a duplicated one. `chain.ts` composes above `deliver`, never below it.
 
+**A failed call keeps the provider's answer.** `DeliveryOutcome.error` is the
+last failure as thrown, and `failureFrom()` (both runtimes) copies its `status`
+and `providerCode`, chains it as `cause` / `previous`, and throws the class it
+was classified as — auth and rate-limit from the classified error, because
+`kind` cannot tell them apart; everything else from `kind`. Until 0.5.0 the
+outcome dropped the error, so every failed call reached its host with no status;
+`tests/failure-keeps-status.test.ts` and `php/tests/FailureKeepsStatusTest.php`
+are the mirror pair that pin it. A provider code is read only through a
+service's declared `providerCodeFrom`, and a reader that throws must never
+become the call's failure.
+
 ### The bug this replaced
 
 The previous runtime (`px-ui-sandbox/resources/flow-nodes/_connector/js/client.ts`)

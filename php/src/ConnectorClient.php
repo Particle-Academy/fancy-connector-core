@@ -129,6 +129,7 @@ final class ConnectorClient
                     $operation,
                     $response->body,
                     self::retryAfter($response->headers),
+                    self::providerCode($service, $response),
                 );
             },
             new RetryPolicy(
@@ -151,19 +152,86 @@ final class ConnectorClient
      * An ambiguous failure on a non-idempotent connector gets a message that
      * says *go and look*, because that is the action. "Request failed" would send
      * someone to re-run it, which is the one thing that must not happen.
+     *
+     * ## What the provider said survives the rewrite
+     *
+     * The message is rewritten for a person; nothing else is. The last failure's
+     * HTTP `status` and `providerCode` are copied across, and the failure itself
+     * is chained as `previous`.
+     *
+     * Until 0.5.0 the outcome never carried the throwable, so this built every
+     * exception from the kind alone: no status on any failed call, a
+     * `ConnectorRequestException` for a rejected CREDENTIAL, and a
+     * `ConnectorTransientException` for a throttle, with the provider's
+     * `retryAfter` lost. The TypeScript twin had the same defect with a bare
+     * `ConnectorError`.
+     *
+     * ## The class is the one the failure was classified as
+     *
+     * A kind cannot tell an auth failure from any other rejection, or a throttle
+     * from a 5xx, so those two come from the classified exception; every other
+     * class is what the kind names, which is the same answer either way. The
+     * subclass is trusted only when it agrees with the aggregate kind — it
+     * always does for anything this client raises, and a disagreement would mean
+     * the class describes a different failure from the one being reported.
      */
     private static function failureFrom(DeliveryOutcome $outcome, string $service, string $operation): ConnectorException
     {
         $last = $outcome->attempts === [] ? null : $outcome->attempts[count($outcome->attempts) - 1];
         $kind = $outcome->kind ?? $last?->kind ?? FailureKind::Ambiguous;
         $message = $outcome->gaveUp ?? "{$service}.{$operation} failed.";
+        $previous = $outcome->error;
+        $said = $previous instanceof ConnectorException ? $previous : null;
+        $status = $said?->status;
+        $providerCode = $said?->providerCode;
+        $sameKind = $said !== null && $said->kind() === $kind;
+
+        if ($sameKind && $said instanceof ConnectorAuthException) {
+            return new ConnectorAuthException($message, $service, $operation, $status, $providerCode, $previous);
+        }
+
+        if ($sameKind && $said instanceof ConnectorRateLimitedException) {
+            return new ConnectorRateLimitedException(
+                $message,
+                $service,
+                $operation,
+                $status,
+                $providerCode,
+                $said->retryAfter,
+                $previous,
+            );
+        }
 
         return match ($kind) {
-            FailureKind::Unreachable => new ConnectorUnreachableException($message, $service, $operation),
-            FailureKind::RefusedExplicitly => new ConnectorTransientException($message, $service, $operation),
-            FailureKind::Rejected => new ConnectorRequestException($message, $service, $operation),
-            FailureKind::Ambiguous => new ConnectorAmbiguousException($message, $service, $operation),
+            FailureKind::Unreachable => new ConnectorUnreachableException($message, $service, $operation, $status, $providerCode, $previous),
+            FailureKind::RefusedExplicitly => new ConnectorTransientException($message, $service, $operation, $status, $providerCode, $previous),
+            FailureKind::Rejected => new ConnectorRequestException($message, $service, $operation, $status, $providerCode, $previous),
+            FailureKind::Ambiguous => new ConnectorAmbiguousException($message, $service, $operation, $status, $providerCode, $previous),
         };
+    }
+
+    /**
+     * The service's declared provider code, or null. Never throws — see
+     * {@see ServiceDescriptor::$providerCodeFrom} for why a reader's failure must
+     * not become the call's.
+     */
+    private static function providerCode(ServiceDescriptor $service, TransportResponse $response): ?string
+    {
+        if (! is_callable($service->providerCodeFrom)) {
+            return null;
+        }
+
+        try {
+            $code = ($service->providerCodeFrom)($response);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (is_int($code)) {
+            return (string) $code;
+        }
+
+        return is_string($code) && trim($code) !== '' ? $code : null;
     }
 
     /**
