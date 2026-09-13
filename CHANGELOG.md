@@ -6,7 +6,9 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
-## [Unreleased]
+## [0.6.0] - 2026-09-13
+
+Additive only. **What a consumer must DO: nothing** — see each entry.
 
 ### Added
 
@@ -409,6 +411,11 @@ clock; this package is the runtime it is written on.
   satisfies it with no dependency in either direction and a host that has never
   heard of a workflow engine can implement it.
 
-[Unreleased]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Particle-Academy/fancy-connector-core/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Particle-Academy/fancy-connector-core/releases/tag/v0.1.0
