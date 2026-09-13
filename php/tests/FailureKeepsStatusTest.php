@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use ParticleAcademy\Connectors\Attempt;
 use ParticleAcademy\Connectors\ConnectorAmbiguousException;
 use ParticleAcademy\Connectors\ConnectorAuthException;
 use ParticleAcademy\Connectors\ConnectorClient;
@@ -12,6 +13,7 @@ use ParticleAcademy\Connectors\ConnectorTransientException;
 use ParticleAcademy\Connectors\ConnectorUnreachableException;
 use ParticleAcademy\Connectors\Delivery;
 use ParticleAcademy\Connectors\FailureKind;
+use ParticleAcademy\Connectors\HttpErrors;
 use ParticleAcademy\Connectors\Mode;
 use ParticleAcademy\Connectors\PreparedRequest;
 use ParticleAcademy\Connectors\RetryPolicy;
@@ -254,6 +256,90 @@ it('treats a blank code as absent, not as an empty string', function () {
     );
 
     expect($failure->providerCode)->toBeNull();
+});
+
+/* ── attempts + idempotent: carried by the TypeScript error since 0.1.0 ─── */
+
+/*
+ * The TS `failureFrom()` sets `attempts` (every failed attempt of the call) and
+ * `idempotent` (what the call declared) on the error it throws, and
+ * `tests/failure-keeps-status.test.ts` reads both. The PHP exception had
+ * neither, so a PHP host could see WHAT
+ * failed but not how many times it was tried or whether a retry was ever
+ * allowed — the two facts that decide whether "go and look" or "run it again" is
+ * the right action. Against 0.5.0 every case in this section fails.
+ */
+
+it('carries every failed attempt of an exhausted call, in order', function () {
+    [$failure] = keepsStatusFailure(
+        [new TransportResponse(502, [], 'bad gateway'), new TransportResponse(503, [], 'maintenance')],
+        attempts: 2,
+    );
+
+    expect($failure->attempts)->toBeArray()->toHaveCount(2)
+        ->and($failure->attempts[0])->toBeInstanceOf(Attempt::class)
+        ->and(array_map(static fn (Attempt $attempt): int => $attempt->attempt, $failure->attempts))->toBe([1, 2])
+        ->and($failure->attempts[0]->kind)->toBe(FailureKind::RefusedExplicitly)
+        // Waited before the second; nothing came after the last.
+        ->and($failure->attempts[0]->waitedMs)->toBeInt()
+        ->and($failure->attempts[1]->waitedMs)->toBeNull()
+        ->and($failure->idempotent)->toBeFalse();
+});
+
+it('records the ONE attempt of an ambiguous failure on a non-idempotent call, and says it was not idempotent', function () {
+    [$failure] = keepsStatusFailure([TransportException::fromCurlErrno(28, 'timed out')], attempts: 3);
+
+    expect($failure->attempts)->toHaveCount(1)
+        ->and($failure->attempts[0]->kind)->toBe(FailureKind::Ambiguous)
+        ->and($failure->idempotent)->toBeFalse();
+});
+
+it('records the retries an idempotent call was allowed, and says it was idempotent', function () {
+    [$failure, $transport] = keepsStatusFailure(
+        [TransportException::fromCurlErrno(28, 'timed out'), TransportException::fromCurlErrno(28, 'timed out again')],
+        attempts: 2,
+        idempotent: true,
+    );
+
+    expect($transport->calls)->toBe(2)
+        ->and($failure->attempts)->toHaveCount(2)
+        ->and($failure->idempotent)->toBeTrue();
+});
+
+it('carries both on the auth and rate-limit classes too, which are built separately', function () {
+    [$auth] = keepsStatusFailure([new TransportResponse(401, [], 'nope')], idempotent: true);
+    [$limited] = keepsStatusFailure([new TransportResponse(429, ['retry-after' => '7'], 'slow down')]);
+
+    expect($auth)->toBeInstanceOf(ConnectorAuthException::class)
+        ->and($auth->attempts)->toHaveCount(1)
+        ->and($auth->idempotent)->toBeTrue()
+        ->and($limited)->toBeInstanceOf(ConnectorRateLimitedException::class)
+        ->and($limited->attempts)->toHaveCount(1)
+        ->and($limited->idempotent)->toBeFalse()
+        ->and($limited->retryAfter)->toBe(7);
+});
+
+it('leaves both NULL on an exception that did not end a call, never [] or false', function () {
+    // "Not the end of a call" and "no attempts / not idempotent" need opposite
+    // readings. An empty list would claim nothing was tried; a false would claim
+    // the connector declared it unsafe to repeat. Neither is known here.
+    //
+    // `toHaveProperty(…, null)` rather than `->attempts` read directly: an
+    // undeclared property also reads as null (with a warning), so a bare read
+    // would pass against the code that has no such property at all.
+    [$failure] = keepsStatusFailure([new TransportResponse(401, [], 'nope')]);
+
+    $notACallsEnd = [
+        'the classified exception chained as previous' => $failure->getPrevious(),
+        'HttpErrors::classify()' => HttpErrors::classify(401, 'example', 'thing_create', 'nope'),
+        'a directly constructed rate-limit exception' => new ConnectorRateLimitedException('slow down'),
+    ];
+
+    foreach ($notACallsEnd as $what => $exception) {
+        expect($exception)
+            ->toHaveProperty('attempts', null, $what)
+            ->toHaveProperty('idempotent', null, $what);
+    }
 });
 
 /* ── delivery ────────────────────────────────────────────────────────────── */

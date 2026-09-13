@@ -15,6 +15,10 @@ use Throwable;
  */
 final class ConnectorRateLimitedException extends ConnectorException
 {
+    /**
+     * @param  list<Attempt>|null  $attempts  see {@see ConnectorException::__construct()}
+     * @param  bool|null  $idempotent  see {@see ConnectorException::__construct()}
+     */
     public function __construct(
         string $message,
         string $service = '',
@@ -24,8 +28,10 @@ final class ConnectorRateLimitedException extends ConnectorException
         /** Seconds to wait, when the provider said. */
         public readonly ?int $retryAfter = null,
         ?Throwable $previous = null,
+        ?array $attempts = null,
+        ?bool $idempotent = null,
     ) {
-        parent::__construct($message, $service, $operation, $status, $providerCode, $previous);
+        parent::__construct($message, $service, $operation, $status, $providerCode, $previous, $attempts, $idempotent);
     }
 
     public function kind(): FailureKind

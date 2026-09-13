@@ -225,6 +225,51 @@ test("a blank code is absent, not an empty string", async () => {
   assert.equal(error.providerCode, undefined);
 });
 
+/* ── attempts + idempotent ───────────────────────────────────────────────── */
+
+// Mirrors the PHP section of the same name, which 0.6.0 added to bring the PHP
+// exception to what this error has carried since 0.1.0. These pin the TS side
+// so the two cannot drift apart again; the code under them is unchanged.
+
+test("an exhausted call carries every failed attempt, in order", async () => {
+  const error = await failure([response(502, "bad gateway"), response(503, "maintenance")], { attempts: 2 });
+  const attempts = error.attempts as Array<{ attempt: number; kind: string; waitedMs?: number }>;
+
+  assert.deepEqual(attempts.map((attempt) => attempt.attempt), [1, 2]);
+  assert.equal(attempts[0]!.kind, "refused-explicitly");
+  assert.equal(typeof attempts[0]!.waitedMs, "number");
+  assert.equal(attempts[1]!.waitedMs, undefined);
+  assert.equal(error.idempotent, false);
+});
+
+test("an idempotent call records the retries it was allowed, and says it was idempotent", async () => {
+  const timeout = () => Object.assign(new Error("timed out"), { code: "ETIMEDOUT" });
+  const error = await failure([timeout(), timeout()], { attempts: 2, idempotent: true });
+
+  assert.equal(error.attempts.length, 2);
+  assert.equal(error.idempotent, true);
+});
+
+test("the auth and rate-limit classes carry both too", async () => {
+  const auth = await failure([response(401, "nope")], { idempotent: true });
+  const limited = await failure([response(429, "slow down", { "retry-after": "7" })]);
+
+  assert.ok(auth instanceof ConnectorAuthError);
+  assert.equal(auth.attempts.length, 1);
+  assert.equal(auth.idempotent, true);
+  assert.ok(limited instanceof ConnectorRateLimited);
+  assert.equal(limited.attempts.length, 1);
+  assert.equal(limited.idempotent, false);
+});
+
+test("an error that did not end a call has neither — absent, never [] or false", async () => {
+  const error = await failure([response(401, "nope")]);
+
+  assert.equal("attempts" in (error.cause as object), false);
+  assert.equal("idempotent" in (error.cause as object), false);
+  assert.equal("attempts" in new ConnectorRateLimited("slow down", { service: "s", operation: "o" }), false);
+});
+
 /* ── delivery ────────────────────────────────────────────────────────────── */
 
 test("deliver() hands back the last failure itself, not only its classification", async () => {

@@ -99,6 +99,14 @@ are the mirror pair that pin it. A provider code is read only through a
 service's declared `providerCodeFrom`, and a reader that throws must never
 become the call's failure.
 
+The error a call throws also says **how the call went**: `attempts` (every
+failed attempt, in order) and `idempotent` (what the call declared). Both are
+set in `failureFrom()` and nowhere else, so on any other error — including the
+classified one chained beneath it — they are absent in TS and `null` in PHP,
+never `[]` / `false`: "this did not end a call" must not read as "nothing was
+tried" or "declared unsafe to repeat". PHP gained them in 0.6.0; TS always had
+them (as untyped, non-enumerable properties).
+
 ### The bug this replaced
 
 The previous runtime (`px-ui-sandbox/resources/flow-nodes/_connector/js/client.ts`)

@@ -140,7 +140,7 @@ final class ConnectorClient
         );
 
         if (! $outcome->ok) {
-            throw self::failureFrom($outcome, $service->service, $operation);
+            throw self::failureFrom($outcome, $service->service, $operation, $idempotent);
         }
 
         return new ConnectorResult($outcome->value, $connection->mode, $connection->id, $outcome->attempts);
@@ -174,9 +174,22 @@ final class ConnectorClient
      * subclass is trusted only when it agrees with the aggregate kind — it
      * always does for anything this client raises, and a disagreement would mean
      * the class describes a different failure from the one being reported.
+     *
+     * ## How the call went, as well as how it ended
+     *
+     * `attempts` (every failed attempt) and `idempotent` (what the call declared)
+     * are set here and only here, as the TypeScript twin's `failureFrom()` has
+     * always set them on its error. Until 0.6.0 the PHP exception carried
+     * neither, so a PHP host could not tell a timeout that was never retried
+     * because the connector is not idempotent from one retried until the budget
+     * ran out — which is the difference between *go and look* and *run it again*.
      */
-    private static function failureFrom(DeliveryOutcome $outcome, string $service, string $operation): ConnectorException
-    {
+    private static function failureFrom(
+        DeliveryOutcome $outcome,
+        string $service,
+        string $operation,
+        bool $idempotent,
+    ): ConnectorException {
         $last = $outcome->attempts === [] ? null : $outcome->attempts[count($outcome->attempts) - 1];
         $kind = $outcome->kind ?? $last?->kind ?? FailureKind::Ambiguous;
         $message = $outcome->gaveUp ?? "{$service}.{$operation} failed.";
@@ -184,10 +197,11 @@ final class ConnectorClient
         $said = $previous instanceof ConnectorException ? $previous : null;
         $status = $said?->status;
         $providerCode = $said?->providerCode;
+        $attempts = $outcome->attempts;
         $sameKind = $said !== null && $said->kind() === $kind;
 
         if ($sameKind && $said instanceof ConnectorAuthException) {
-            return new ConnectorAuthException($message, $service, $operation, $status, $providerCode, $previous);
+            return new ConnectorAuthException($message, $service, $operation, $status, $providerCode, $previous, $attempts, $idempotent);
         }
 
         if ($sameKind && $said instanceof ConnectorRateLimitedException) {
@@ -199,14 +213,16 @@ final class ConnectorClient
                 $providerCode,
                 $said->retryAfter,
                 $previous,
+                $attempts,
+                $idempotent,
             );
         }
 
         return match ($kind) {
-            FailureKind::Unreachable => new ConnectorUnreachableException($message, $service, $operation, $status, $providerCode, $previous),
-            FailureKind::RefusedExplicitly => new ConnectorTransientException($message, $service, $operation, $status, $providerCode, $previous),
-            FailureKind::Rejected => new ConnectorRequestException($message, $service, $operation, $status, $providerCode, $previous),
-            FailureKind::Ambiguous => new ConnectorAmbiguousException($message, $service, $operation, $status, $providerCode, $previous),
+            FailureKind::Unreachable => new ConnectorUnreachableException($message, $service, $operation, $status, $providerCode, $previous, $attempts, $idempotent),
+            FailureKind::RefusedExplicitly => new ConnectorTransientException($message, $service, $operation, $status, $providerCode, $previous, $attempts, $idempotent),
+            FailureKind::Rejected => new ConnectorRequestException($message, $service, $operation, $status, $providerCode, $previous, $attempts, $idempotent),
+            FailureKind::Ambiguous => new ConnectorAmbiguousException($message, $service, $operation, $status, $providerCode, $previous, $attempts, $idempotent),
         };
     }
 

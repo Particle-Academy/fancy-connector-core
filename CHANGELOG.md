@@ -8,6 +8,28 @@ version number is not a promise it can keep yet; the entries below are.
 
 ## [Unreleased]
 
+### Added
+
+- **PHP: the exception a failed call throws now carries `attempts` and
+  `idempotent`**, as the TypeScript error has since 0.1.0. `attempts` is every
+  failed attempt of the call, in order, as `list<Attempt>`; `idempotent` is
+  what the call declared. Without them a PHP host could see *what* failed but
+  not whether a timeout went unretried because the connector is not idempotent
+  or was retried until the budget ran out — which is the difference between
+  *go and look* and *run it again*.
+
+  Both are `null` on any exception that did not end a call — one you construct
+  yourself, one from `HttpErrors::classify()`, and the classified exception
+  chained as `getPrevious()`. Deliberately not `[]` / `false`, which would
+  claim nothing was tried, or that the connector declared a retry unsafe.
+  TypeScript is unchanged: there they stay absent.
+
+  **What a consumer must DO: nothing.** Both are new trailing, optional
+  constructor parameters on `ConnectorException` and
+  `ConnectorRateLimitedException`, so existing `new …Exception(...)` calls,
+  positional or named, keep working. A subclass of `ConnectorException` that
+  declares its own constructor does not need to pass them.
+
 ### Changed
 
 - **CI now runs `pint --test` on the PHP tree**, and the tree passes it. Pint

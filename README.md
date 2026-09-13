@@ -84,11 +84,17 @@ try {
   error.kind;          // the retry primitive
   error.providerCode;  // only where the service declared `providerCodeFrom`
   error.cause;         // the classified error; for a thrown transport, the original below it
+  // Set at runtime but not declared on the `ConnectorError` type, so read them
+  // through a narrowing of your own:
+  (error as { attempts?: Attempt[] }).attempts;       // every failed attempt of the call, in order
+  (error as { idempotent?: boolean }).idempotent;     // what the call declared — "never allowed to retry" vs "retries ran out"
 }
 ```
 
 PHP is the same: `ConnectorAuthException`, `->status`, `->providerCode`,
-`->getPrevious()`. A provider's own error code is read only where its
+`->getPrevious()`, `->attempts`, `->idempotent`. The last two are set only on the
+error a call throws; anywhere else they are absent (TS) or `null` (PHP), never
+`[]` or `false`. A provider's own error code is read only where its
 `ServiceDescriptor` says where it lives (`providerCodeFrom`) — Bluesky's `error`
 is a code and Mastodon's `error` is a sentence, so a guess would be wrong in the
 most plausible way available.
