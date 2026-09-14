@@ -1,5 +1,7 @@
 # fancy-connector-core
 
+[![Fancified](art/fancified.svg)](https://particle.academy)
+
 **The runtime under every Fancy connector.** Modes and estates, connections, one
 call path, a failure taxonomy that knows the difference between *it never
 arrived* and *nobody can tell*, deterministic fakers, webhook verification, pure
