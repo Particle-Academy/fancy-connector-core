@@ -6,6 +6,34 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.7.0] - 2026-09-15
+
+Two additions to the connector vocabulary, both approved by the owner on
+2026-09-14 and both meeting the two-provider bar before shipping: the
+subscription lease is for Google Calendar `events.watch` and Microsoft Graph
+subscriptions; the MIME transform is for inbound email, provider-agnostic,
+with Resend first.
+
+### Added
+
+- **`SubscriptionLease`** (`src/lease.ts`, `SubscriptionLease.php` with
+  `LeaseState` and `LeaseAction`) — the duty a `subscription` trigger carries,
+  as one value: the provider's expiry as an RFC 3339 instant, the connector's
+  `renewBeforeSeconds`, and the `renewOperation` the host calls when due.
+  `leaseState` says where it is (active / due / expired — both boundaries
+  inclusive, expired wins) and `leaseAction` what the host does (none / renew /
+  resync; a missed lease is resync, never a quiet re-create). Both runtimes
+  read `fixtures/subscription-lease/cases.json`. A host runs ONE renewal
+  scheduler for every expiring trigger instead of one per connector.
+- **`parseMime` / `Mime::parse`** — raw MIME in, `headers`, `subject`,
+  `messageId`, `text`, `html`, `parts` and `attachments` out, identical in both
+  runtimes and held to the authored corpus under `fixtures/mime/` (CRLF and
+  LF; folded headers; RFC 2047 B and Q words; quoted-printable and base64;
+  nested multipart; RFC 2231 `filename*`; utf-8, us-ascii, iso-8859-1,
+  iso-8859-15 and windows-1252 — any other charset leaves a part with no
+  text). Attachments carry their bytes as base64. **What to do:** nothing
+  unless you want them; neither touches an existing surface.
+
 ## [0.6.2] - 2026-09-14
 
 ### Fixed
