@@ -278,7 +278,10 @@ key and failing like a wrong secret; `utf8` stays the default. And `verifyHmac`
 takes a LIST: Stripe signs once per active secret while a secret is rolled
 and says compare against EACH, Svix's header "could be any number of
 signatures" — a first-only rule refused a whole roll as `signature did not
-match`. Both runtimes read `fixtures/signed-delivery/cases.json`, whose
+match`. Svix also signs the delivery's ID, so a spec may name an `idHeader`
+and the scheme's payload takes it as a third argument; a declared id the
+delivery lacks is refused by name. Both runtimes read
+`fixtures/signed-delivery/cases.json`, whose
 signatures were computed by the providers' own rules, not by this code.
 `WebhookVerificationSpec` is now a union of the HMAC spec and the token spec;
 `verifyDelivery` dispatches on the scheme's NAMED `kind` — `"shared-token"`,

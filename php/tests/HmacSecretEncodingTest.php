@@ -84,6 +84,28 @@ it('ROTATION: accepts a delivery carrying several signatures when ANY matches â€
     expect($verify([]))->toBe(['ok' => false, 'reason' => 'delivery carried no signature header']);
 });
 
+it('hands a three-argument payload the delivery id, and a two-argument one is called as before', function () {
+    $good = svixSignature(SVIX_SECRET, SVIX_ID, SVIX_TIMESTAMP, SVIX_RAW);
+    $threeArgs = static fn (string $raw, ?string $timestamp, ?string $id): string => "{$id}.{$timestamp}.{$raw}";
+    $twoArgs = static fn (string $raw, ?string $timestamp): string => SVIX_ID.".{$timestamp}.{$raw}";
+
+    foreach ([$threeArgs, $twoArgs] as $payload) {
+        expect(WebhookVerifier::verify(
+            raw: SVIX_RAW,
+            signature: $good,
+            secret: SVIX_SECRET,
+            payload: $payload,
+            encoding: 'base64',
+            tolerance: 300,
+            timestamp: SVIX_TIMESTAMP,
+            now: (int) SVIX_TIMESTAMP + 10,
+            secretEncoding: 'base64',
+            secretPrefix: 'whsec_',
+            id: SVIX_ID,
+        ))->toBe(['ok' => true, 'reason' => null]);
+    }
+});
+
 it('refuses a secret that does not carry the declared prefix, by name', function () use ($svixPayload) {
     $signature = svixSignature(SVIX_SECRET, SVIX_ID, SVIX_TIMESTAMP, SVIX_RAW);
 

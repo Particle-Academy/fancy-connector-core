@@ -97,6 +97,37 @@ test("ROTATION: a delivery carrying several signatures is accepted when ANY matc
   assert.deepEqual(await verifyHmac({ ...at, signature: [] }), { ok: false, reason: "delivery carried no signature header" });
 });
 
+test("end to end: a Svix-shaped trigger reads the id, timestamp and every signature from the headers", async () => {
+  const { verifyDelivery } = await import("../src/index");
+  const good = await svixSignature(SECRET, ID, TIMESTAMP, RAW);
+  const stale = await svixSignature("whsec_" + btoa("an-older-secret-still-active"), ID, TIMESTAMP, RAW);
+  const trigger = {
+    service: "resend",
+    operation: "email_received",
+    delivery: "webhook" as const,
+    setup: "Add an endpoint.",
+    faker: () => ({}),
+    verification: {
+      signatureHeader: "svix-signature",
+      timestampHeader: "svix-timestamp",
+      idHeader: "svix-id",
+      scheme: { ...svix, payload: (raw: string, timestamp?: string, id?: string) => `${id}.${timestamp}.${raw}` },
+      // Svix: a space-separated list of `v1,<sig>`; EVERY one is offered.
+      parse: (header: string) => ({
+        signatures: header.split(" ").map((p) => p.trim().split(",", 2)).filter(([k]) => k === "v1").map(([, v]) => v as string),
+      }),
+    },
+  };
+  const headers = { "svix-id": ID, "svix-timestamp": TIMESTAMP, "svix-signature": `v1,${stale} v1,${good}` };
+
+  assert.deepEqual(await verifyDelivery(trigger, { raw: RAW, headers }, SECRET, Number(TIMESTAMP) + 10), { ok: true });
+  // The id is part of the signed content: a delivery without it is refused by name, not signed with a hole.
+  assert.deepEqual(
+    await verifyDelivery(trigger, { raw: RAW, headers: { "svix-timestamp": TIMESTAMP, "svix-signature": `v1,${good}` } }, SECRET, Number(TIMESTAMP) + 10),
+    { ok: false, reason: "delivery carried no id header" },
+  );
+});
+
 test("hmac() takes the same two parameters, so a connector can sign the way it verifies", async () => {
   const expected = await svixSignature(SECRET, ID, TIMESTAMP, RAW);
 

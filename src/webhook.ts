@@ -44,9 +44,10 @@ export type HmacScheme = {
   /**
    * Build the exact string that gets signed. Providers differ here more than
    * anywhere else — Stripe signs `${timestamp}.${body}`, Slack signs
-   * `v0:${timestamp}:${body}`, GitHub signs the body alone.
+   * `v0:${timestamp}:${body}`, GitHub signs the body alone, and Svix signs
+   * `${id}.${timestamp}.${body}` where `id` is the delivery's own id header.
    */
-  payload: (raw: string, timestamp?: string) => string;
+  payload: (raw: string, timestamp?: string, id?: string) => string;
   /** Seconds a delivery stays acceptable. */
   tolerance?: number;
   /** Encoding of the signature the provider sends. */
@@ -114,10 +115,12 @@ export async function verifyHmac(options: {
   secret: string | undefined;
   scheme: HmacScheme;
   timestamp?: string;
+  /** The delivery's id, when the scheme signs one (Svix's `svix-id`). */
+  id?: string;
   /** Seconds since the epoch. Injected so tests are not clock-dependent. */
   now?: number;
 }): Promise<WebhookVerification> {
-  const { raw, secret, scheme, timestamp } = options;
+  const { raw, secret, scheme, timestamp, id } = options;
   const signatures = (Array.isArray(options.signature) ? options.signature : [options.signature]).filter(
     (s): s is string => typeof s === "string" && s !== "",
   );
@@ -148,7 +151,7 @@ export async function verifyHmac(options: {
   const key = secretKeyBytes(secret, scheme);
   if ("reason" in key) return { ok: false, reason: key.reason };
 
-  const expected = await hmac(secret, scheme.payload(raw, timestamp), scheme.algorithm, scheme.encoding ?? "hex", scheme);
+  const expected = await hmac(secret, scheme.payload(raw, timestamp, id), scheme.algorithm, scheme.encoding ?? "hex", scheme);
 
   // Each candidate is compared in constant time; which of them matched is not
   // a secret, so stopping at the first match leaks nothing.

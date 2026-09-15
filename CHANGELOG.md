@@ -37,6 +37,14 @@ from their own pages on 2026-09-15. Additive in both runtimes;
   named), no signature, no secret; Stripe valid, a roll, a re-serialised
   body, a missing timestamp. Both runtimes read it; the seed of the
   conformance suite of that name.
+- **`HmacVerificationSpec.idHeader`, and the payload's third argument.**
+  Svix signs `${svix-id}.${svix-timestamp}.${body}`: the delivery's ID is
+  part of the signed content, so `verifyDelivery` reads the declared header
+  and hands it to `scheme.payload(raw, timestamp, id)` — `verify(...,
+  id:)` in PHP, `verify_hmac(..., id=)` in the Python seed. A declared id
+  header the delivery does not carry is refused as `delivery carried no id
+  header`, never signed with a hole in it. Every two-argument payload
+  written before this release is called exactly as before.
 
 ### Fixed
 

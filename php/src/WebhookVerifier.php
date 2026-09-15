@@ -39,10 +39,10 @@ final class WebhookVerifier
      * while still answering the provider with an opaque 400.
      *
      * @param  string  $raw  the body EXACTLY as received
-     * @param  callable(string, ?string): string  $payload  builds the string that gets
-     *                                                      signed. Providers differ here more than anywhere else — Stripe signs
-     *                                                      `{timestamp}.{body}`, Slack signs `v0:{timestamp}:{body}`, GitHub signs the
-     *                                                      body alone.
+     * @param  callable(string, ?string, ?string): string  $payload  builds the string that gets
+     *                                                               signed. Providers differ here more than anywhere else — Stripe signs
+     *                                                               `{timestamp}.{body}`, Slack signs `v0:{timestamp}:{body}`, GitHub signs the
+     *                                                               body alone, Svix signs `{id}.{timestamp}.{body}` (the third argument).
      * @param  int|null  $now  seconds since the epoch. Injected so tests are not
      *                         clock-dependent.
      * @param  string  $secretEncoding  how the SECRET is spelled: `utf8` (the default, every
@@ -65,6 +65,7 @@ final class WebhookVerifier
         string $encoding = 'hex',
         string $secretEncoding = 'utf8',
         ?string $secretPrefix = null,
+        ?string $id = null,
     ): array {
         if ($secret === null || $secret === '') {
             // Never "accept when unconfigured". An endpoint that verifies
@@ -107,7 +108,10 @@ final class WebhookVerifier
             }
         }
 
-        $computed = hash_hmac($algorithm, $payload($raw, $timestamp), $key, $encoding === 'base64');
+        // A payload that signs the delivery's ID (Svix) takes it as a third
+        // argument; the two-argument payloads every earlier scheme wrote
+        // ignore an extra argument, as PHP lets a user function do.
+        $computed = hash_hmac($algorithm, $payload($raw, $timestamp, $id), $key, $encoding === 'base64');
         $expected = $encoding === 'base64' ? base64_encode($computed) : $computed;
 
         // Each candidate is compared in constant time; which of them matched
