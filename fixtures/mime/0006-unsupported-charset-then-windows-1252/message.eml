@@ -1,0 +1,18 @@
+From: Ada Lovelace <ada@example.test>
+To: compass@example.test
+Subject: Two plain parts, one in a charset this package does not decode
+Message-ID: <0006@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="mixed-0006"
+
+--mixed-0006
+Content-Type: text/plain; charset=koi8-r
+Content-Transfer-Encoding: base64
+
+8NLJ18XU
+--mixed-0006
+Content-Type: text/plain; charset=windows-1252
+Content-Transfer-Encoding: quoted-printable
+
+=93Hello=94 =80 world
+--mixed-0006--

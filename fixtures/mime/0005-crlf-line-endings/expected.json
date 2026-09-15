@@ -1,0 +1,29 @@
+{
+  "headers": [
+    { "name": "from", "value": "Ada Lovelace <ada@example.test>" },
+    { "name": "to", "value": "compass@example.test" },
+    { "name": "subject", "value": "Plain text, CRLF line endings" },
+    { "name": "message-id", "value": "<0005@example.test>" },
+    { "name": "mime-version", "value": "1.0" },
+    { "name": "content-type", "value": "text/plain; charset=us-ascii" }
+  ],
+  "subject": "Plain text, CRLF line endings",
+  "messageId": "<0005@example.test>",
+  "text": "Hello from a plain message.\r\nTwo lines.\r\n",
+  "html": null,
+  "parts": [
+    {
+      "index": 0,
+      "contentType": "text/plain",
+      "charset": "us-ascii",
+      "disposition": null,
+      "filename": null,
+      "contentId": null,
+      "size": 41,
+      "headers": [
+        { "name": "content-type", "value": "text/plain; charset=us-ascii" }
+      ]
+    }
+  ],
+  "attachments": []
+}

@@ -1,0 +1,60 @@
+{
+  "headers": [
+    { "name": "from", "value": "Ada Lovelace <ada@example.test>" },
+    { "name": "to", "value": "compass@example.test" },
+    { "name": "subject", "value": "Résumé — café" },
+    { "name": "message-id", "value": "<0003@example.test>" },
+    { "name": "mime-version", "value": "1.0" },
+    { "name": "content-type", "value": "multipart/mixed; boundary=\"mixed-0003\"" }
+  ],
+  "subject": "Résumé — café",
+  "messageId": "<0003@example.test>",
+  "text": "See the attachment.",
+  "html": null,
+  "parts": [
+    {
+      "index": 0,
+      "contentType": "text/plain",
+      "charset": "utf-8",
+      "disposition": null,
+      "filename": null,
+      "contentId": null,
+      "size": 19,
+      "headers": [
+        { "name": "content-type", "value": "text/plain; charset=utf-8" },
+        { "name": "content-transfer-encoding", "value": "8bit" }
+      ]
+    },
+    {
+      "index": 1,
+      "contentType": "application/pdf",
+      "charset": null,
+      "disposition": "attachment",
+      "filename": "resume.pdf",
+      "contentId": null,
+      "size": 24,
+      "headers": [
+        { "name": "content-type", "value": "application/pdf; name=\"resume.pdf\"" },
+        { "name": "content-disposition", "value": "attachment; filename=\"resume.pdf\"" },
+        { "name": "content-transfer-encoding", "value": "base64" }
+      ]
+    }
+  ],
+  "attachments": [
+    {
+      "index": 1,
+      "contentType": "application/pdf",
+      "charset": null,
+      "disposition": "attachment",
+      "filename": "resume.pdf",
+      "contentId": null,
+      "size": 24,
+      "headers": [
+        { "name": "content-type", "value": "application/pdf; name=\"resume.pdf\"" },
+        { "name": "content-disposition", "value": "attachment; filename=\"resume.pdf\"" },
+        { "name": "content-transfer-encoding", "value": "base64" }
+      ],
+      "content": "JVBERi0xLjQgbm90IGEgcmVhbCBwZGYK"
+    }
+  ]
+}

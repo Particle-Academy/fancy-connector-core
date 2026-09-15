@@ -1,0 +1,9 @@
+From: Ada Lovelace <ada@example.test>
+To: compass@example.test
+Subject: Plain text, CRLF line endings
+Message-ID: <0005@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+Hello from a plain message.
+Two lines.

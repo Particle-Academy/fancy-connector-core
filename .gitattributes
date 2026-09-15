@@ -11,3 +11,7 @@
 #     Generated from a CRLF checkout, the copy differs from one generated on
 #     Linux with no source change at all.
 * text=auto eol=lf
+
+# The MIME corpus is BYTES: one case exists to prove CRLF is handled, and a
+# normalised checkout would turn it into the LF case it already has.
+fixtures/mime/**/message.eml -text

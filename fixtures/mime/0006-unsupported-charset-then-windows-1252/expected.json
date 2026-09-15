@@ -1,0 +1,43 @@
+{
+  "headers": [
+    { "name": "from", "value": "Ada Lovelace <ada@example.test>" },
+    { "name": "to", "value": "compass@example.test" },
+    { "name": "subject", "value": "Two plain parts, one in a charset this package does not decode" },
+    { "name": "message-id", "value": "<0006@example.test>" },
+    { "name": "mime-version", "value": "1.0" },
+    { "name": "content-type", "value": "multipart/mixed; boundary=\"mixed-0006\"" }
+  ],
+  "subject": "Two plain parts, one in a charset this package does not decode",
+  "messageId": "<0006@example.test>",
+  "text": "“Hello” € world",
+  "html": null,
+  "parts": [
+    {
+      "index": 0,
+      "contentType": "text/plain",
+      "charset": "koi8-r",
+      "disposition": null,
+      "filename": null,
+      "contentId": null,
+      "size": 6,
+      "headers": [
+        { "name": "content-type", "value": "text/plain; charset=koi8-r" },
+        { "name": "content-transfer-encoding", "value": "base64" }
+      ]
+    },
+    {
+      "index": 1,
+      "contentType": "text/plain",
+      "charset": "windows-1252",
+      "disposition": null,
+      "filename": null,
+      "contentId": null,
+      "size": 15,
+      "headers": [
+        { "name": "content-type", "value": "text/plain; charset=windows-1252" },
+        { "name": "content-transfer-encoding", "value": "quoted-printable" }
+      ]
+    }
+  ],
+  "attachments": []
+}

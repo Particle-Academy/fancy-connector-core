@@ -240,6 +240,22 @@ AND re-subscribes. The boundaries are decided, not measured, and both runtimes
 read them from `fixtures/subscription-lease/cases.json` — one table, so a
 boundary cannot be decided differently on one side.
 
+**A webhook trigger may declare a payload TRANSFORM**, and the first one is
+raw MIME → headers, parts and attachments (`src/mime.ts` / `Mime.php`), for
+inbound email. Written from scratch — no third-party parser in either runtime
+— and held to the authored corpus under `fixtures/mime/`: every case is a raw
+message and the parse it MUST produce, written by hand, never captured from a
+run, so the two runtimes are compared against a decision rather than against
+each other. `fixtures/mime/README.md` names the decision each case pins; the
+ones that go differently in two languages if nobody says otherwise are that
+the line break before a boundary belongs to the boundary, that `size` is the
+transfer-decoded byte length before any charset conversion, that a text part
+keeps the message's own line endings, that a charset this package does not
+decode leaves a part with no text rather than a guess, and that `contentId`
+loses its angle brackets while `messageId` keeps them. Latin-1 is decoded as
+ISO-8859-1 in both runtimes — the WHATWG `TextDecoder` would silently give
+windows-1252 for that label, which PHP's mbstring does not.
+
 ---
 
 ## The principle underneath three separate rules

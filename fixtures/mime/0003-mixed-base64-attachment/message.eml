@@ -1,0 +1,19 @@
+From: Ada Lovelace <ada@example.test>
+To: compass@example.test
+Subject: =?UTF-8?B?UsOpc3Vtw6kg4oCUIGNhZsOp?=
+Message-ID: <0003@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="mixed-0003"
+
+--mixed-0003
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: 8bit
+
+See the attachment.
+--mixed-0003
+Content-Type: application/pdf; name="resume.pdf"
+Content-Disposition: attachment; filename="resume.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQgbm90IGEgcmVhbCBwZGYK
+--mixed-0003--

@@ -1,0 +1,43 @@
+{
+  "headers": [
+    { "name": "from", "value": "Renée Dupont <renee@example.test>" },
+    { "name": "to", "value": "compass@example.test" },
+    { "name": "subject", "value": "Café résumé" },
+    { "name": "message-id", "value": "<0002@example.test>" },
+    { "name": "mime-version", "value": "1.0" },
+    { "name": "content-type", "value": "multipart/alternative; boundary=\"alt-0002\"" }
+  ],
+  "subject": "Café résumé",
+  "messageId": "<0002@example.test>",
+  "text": "Un café et un résumé, sur une ligne très longue qui doit être coupée en deux.",
+  "html": "<p>Un café et un résumé.</p>",
+  "parts": [
+    {
+      "index": 0,
+      "contentType": "text/plain",
+      "charset": "iso-8859-1",
+      "disposition": null,
+      "filename": null,
+      "contentId": null,
+      "size": 77,
+      "headers": [
+        { "name": "content-type", "value": "text/plain; charset=iso-8859-1" },
+        { "name": "content-transfer-encoding", "value": "quoted-printable" }
+      ]
+    },
+    {
+      "index": 1,
+      "contentType": "text/html",
+      "charset": "iso-8859-1",
+      "disposition": null,
+      "filename": null,
+      "contentId": null,
+      "size": 28,
+      "headers": [
+        { "name": "content-type", "value": "text/html; charset=iso-8859-1" },
+        { "name": "content-transfer-encoding", "value": "quoted-printable" }
+      ]
+    }
+  ],
+  "attachments": []
+}
