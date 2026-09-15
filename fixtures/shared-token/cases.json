@@ -1,0 +1,114 @@
+{
+  "suite": "shared/shared-token",
+  "title": "Verifying a delivery by a shared token the provider echoes back",
+  "contract": {
+    "summary": "Some providers do not sign deliveries; they echo a token the subscriber chose when it subscribed. Google Calendar sends the channel's `token` back in the `X-Goog-Channel-Token` header on every notification (with an EMPTY body); Microsoft Graph sends `clientState` inside EVERY item of the notification's `value` array. Verification is a constant-time comparison of that echoed value against the connection's secret — the same refusal-by-default as HMAC (no secret configured is a failure, never an accept), and the same result shape.",
+    "functions": {
+      "verifySharedToken": "verifySharedToken({raw, headers, secret, scheme: {in: header, name} | {in: body, path}}) -> {ok: true} | {ok: false, reason}"
+    },
+    "reference": "authored",
+    "referenceNote": "Decisions: a header name is matched case-insensitively (proxies do not preserve case); a body path is dotted, and a segment ending in `[]` means EVERY element of that array, all of which must match — one wrong item fails the whole delivery, and an empty collection carries no token; an absent, empty or non-string token is `delivery carried no token` or `token did not match`, never accepted; a body that is not JSON under a body scheme is refused as such. Reasons are fixed strings a host can log on.",
+    "implementations": [
+      { "language": "node", "package": "@particle-academy/fancy-connector-core", "symbol": "verifySharedToken from \"@particle-academy/fancy-connector-core\"" },
+      { "language": "php", "package": "particle-academy/fancy-connector-core", "symbol": "ParticleAcademy\\Connectors\\WebhookVerifier::verifySharedToken(raw, headers, secret, in, name)" }
+    ]
+  },
+  "cases": [
+    {
+      "id": "0001-header-token-matches",
+      "title": "Google's channel token in the header, empty body: accepted",
+      "input": { "scheme": { "in": "header", "name": "X-Goog-Channel-Token" }, "secret": "s3cret", "headers": { "X-Goog-Channel-Token": "s3cret", "X-Goog-Resource-State": "exists" }, "raw": "" },
+      "expected": { "ok": true }
+    },
+    {
+      "id": "0002-header-name-is-case-insensitive",
+      "title": "A lower-cased header from a proxy is the same header",
+      "input": { "scheme": { "in": "header", "name": "X-Goog-Channel-Token" }, "secret": "s3cret", "headers": { "x-goog-channel-token": "s3cret" }, "raw": "" },
+      "expected": { "ok": true }
+    },
+    {
+      "id": "0003-header-token-mismatch",
+      "title": "A different token is refused",
+      "input": { "scheme": { "in": "header", "name": "X-Goog-Channel-Token" }, "secret": "s3cret", "headers": { "X-Goog-Channel-Token": "other" }, "raw": "" },
+      "expected": { "ok": false, "reason": "token did not match" }
+    },
+    {
+      "id": "0004-header-absent",
+      "title": "No token header at all",
+      "input": { "scheme": { "in": "header", "name": "X-Goog-Channel-Token" }, "secret": "s3cret", "headers": { "X-Goog-Resource-State": "sync" }, "raw": "" },
+      "expected": { "ok": false, "reason": "delivery carried no token" }
+    },
+    {
+      "id": "0005-header-empty",
+      "title": "An empty token header is no token",
+      "input": { "scheme": { "in": "header", "name": "X-Goog-Channel-Token" }, "secret": "s3cret", "headers": { "X-Goog-Channel-Token": "" }, "raw": "" },
+      "expected": { "ok": false, "reason": "delivery carried no token" }
+    },
+    {
+      "id": "0006-no-secret-is-a-failure",
+      "title": "Never accept when unconfigured — an endpoint that verifies nothing looks protected",
+      "input": { "scheme": { "in": "header", "name": "X-Goog-Channel-Token" }, "secret": null, "headers": { "X-Goog-Channel-Token": "s3cret" }, "raw": "" },
+      "expected": { "ok": false, "reason": "no shared token configured for this trigger" }
+    },
+    {
+      "id": "0007-empty-secret-is-a-failure",
+      "title": "An empty secret is unconfigured, not a token that happens to be empty",
+      "input": { "scheme": { "in": "header", "name": "X-Goog-Channel-Token" }, "secret": "", "headers": { "X-Goog-Channel-Token": "" }, "raw": "" },
+      "expected": { "ok": false, "reason": "no shared token configured for this trigger" }
+    },
+    {
+      "id": "0008-body-single-item-matches",
+      "title": "Graph's clientState on the one notification in the batch: accepted",
+      "input": { "scheme": { "in": "body", "path": "value[].clientState" }, "secret": "s3cret", "headers": { "Content-Type": "application/json" }, "raw": "{\"value\":[{\"subscriptionId\":\"7f10\",\"clientState\":\"s3cret\",\"changeType\":\"created\"}]}" },
+      "expected": { "ok": true }
+    },
+    {
+      "id": "0009-body-every-item-must-match",
+      "title": "A batch with one wrong clientState is refused as a whole",
+      "input": { "scheme": { "in": "body", "path": "value[].clientState" }, "secret": "s3cret", "headers": {}, "raw": "{\"value\":[{\"clientState\":\"s3cret\"},{\"clientState\":\"other\"}]}" },
+      "expected": { "ok": false, "reason": "token did not match" }
+    },
+    {
+      "id": "0010-body-all-items-match",
+      "title": "A batch where every item carries the token is accepted",
+      "input": { "scheme": { "in": "body", "path": "value[].clientState" }, "secret": "s3cret", "headers": {}, "raw": "{\"value\":[{\"clientState\":\"s3cret\"},{\"clientState\":\"s3cret\"}]}" },
+      "expected": { "ok": true }
+    },
+    {
+      "id": "0011-body-empty-collection-carries-no-token",
+      "title": "An empty `value` has nothing to compare, and nothing to compare is not a match",
+      "input": { "scheme": { "in": "body", "path": "value[].clientState" }, "secret": "s3cret", "headers": {}, "raw": "{\"value\":[]}" },
+      "expected": { "ok": false, "reason": "delivery carried no token" }
+    },
+    {
+      "id": "0012-body-not-json",
+      "title": "A body scheme on a body that is not JSON",
+      "input": { "scheme": { "in": "body", "path": "value[].clientState" }, "secret": "s3cret", "headers": {}, "raw": "<html>nope</html>" },
+      "expected": { "ok": false, "reason": "delivery body is not JSON" }
+    },
+    {
+      "id": "0013-body-path-absent",
+      "title": "Items without the field carry no token",
+      "input": { "scheme": { "in": "body", "path": "value[].clientState" }, "secret": "s3cret", "headers": {}, "raw": "{\"value\":[{\"subscriptionId\":\"7f10\"}]}" },
+      "expected": { "ok": false, "reason": "delivery carried no token" }
+    },
+    {
+      "id": "0014-body-non-string-token-does-not-match",
+      "title": "A number where the token should be is a mismatch, not a coincidence",
+      "input": { "scheme": { "in": "body", "path": "value[].clientState" }, "secret": "123", "headers": {}, "raw": "{\"value\":[{\"clientState\":123}]}" },
+      "expected": { "ok": false, "reason": "token did not match" }
+    },
+    {
+      "id": "0015-body-scalar-path",
+      "title": "A path with no collection segment reads one value",
+      "input": { "scheme": { "in": "body", "path": "clientState" }, "secret": "s3cret", "headers": {}, "raw": "{\"clientState\":\"s3cret\"}" },
+      "expected": { "ok": true }
+    },
+    {
+      "id": "0016-shared-prefix-is-still-a-mismatch",
+      "title": "A token that agrees on every byte but the last is refused (constant-time in both runtimes)",
+      "input": { "scheme": { "in": "header", "name": "X-Goog-Channel-Token" }, "secret": "s3cret-0123456789abcdef", "headers": { "X-Goog-Channel-Token": "s3cret-0123456789abcdeX" }, "raw": "" },
+      "expected": { "ok": false, "reason": "token did not match" }
+    }
+  ]
+}

@@ -6,7 +6,59 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
-## [Unreleased]
+## [0.8.0] - 2026-09-15
+
+The declaration half of the subscription vocabulary (Tynn #15), so a
+generated `subscription` trigger can say how its lease is built and how its
+deliveries are verified, for the two providers that make it vocabulary:
+Google Calendar `events.watch` and Microsoft Graph subscriptions. Additive
+in both runtimes; `CONNECTOR_API_VERSION` stays at 1, because nothing a
+connector must implement changed.
+
+### Added
+
+- **`LeaseDeclaration`** on `TriggerDescriptor.lease` (`LeaseDeclaration.php`
+  with `ExpiresAtUnit`) — `expiresAtFrom` (a dotted path into the create or
+  renew response), `expiresAtUnit` (`rfc3339` | `epoch-ms`; `EXPIRES_AT_UNITS`
+  ships as data), `renewBeforeSeconds`, `renewOperation`.
+- **`leaseFromResponse` / `SubscriptionLease::fromResponse`** — the one
+  conversion from a provider's response to a `SubscriptionLease`. Refuses,
+  naming the path, rather than guess: a missing or null path, digits under
+  `rfc3339`, an instant under `epoch-ms`, a fractional epoch, an unknown unit.
+  Stores the expiry in UTC at millisecond precision, fraction truncated. Both
+  runtimes read `fixtures/lease-from-response/cases.json` (14 rows).
+- **`SharedTokenScheme` and `verifySharedToken`** (`WebhookVerifier::verifySharedToken`)
+  — verification by a token the provider echoes: in a header (Google's
+  `X-Goog-Channel-Token`) or at a dotted body path where `[]` fans out over a
+  batch and every item must match (Graph's `value[].clientState`). Fixed
+  reasons a host can log on: `no shared token configured for this trigger`,
+  `delivery carried no token`, `token did not match`, `delivery body is not
+  JSON`. Both runtimes read `fixtures/shared-token/cases.json` (16 rows).
+- **`ChallengeHandshake` and `handshakeResponse`**
+  (`WebhookVerifier::handshakeResponse`) — Graph's `validationToken` echo on
+  subscription creation, declared as data on the verification spec and
+  answered by a pure function: `{status: 200, contentType: "text/plain",
+  body}` or nothing when the request is not a challenge.
+- **`WebhookVerificationSpec` is a union** of `HmacVerificationSpec` (the
+  0.7.0 shape, unchanged, now with an optional `handshake`) and
+  `SharedTokenVerificationSpec`; `verifyDelivery` dispatches on it and
+  `isSharedTokenSpec` / `isSharedTokenScheme` narrow it. **What to do:** a
+  connector that only CONSTRUCTS a spec compiles unchanged. A host that READS
+  `verification.signatureHeader` off the spec must narrow first
+  (`!isSharedTokenSpec(spec)`); `tsc` will say so.
+
+### Fixed
+
+- **PHP refused a Graph-shaped instant.** `SubscriptionLease::of` parsed the
+  fraction with PHP's six-digit formats, so `2026-09-22T18:23:45.9356913Z`
+  was `not a real instant` in PHP and a lease in TypeScript. Both runtimes now
+  accept one to nine fractional digits and TRUNCATE to milliseconds before
+  comparing, so a `state` boundary cannot fall between a microsecond PHP saw
+  and a millisecond Node saw. (Fancy: the conformance suite gets a row for
+  this.)
+- `MimeMessage.php` had failed `pint --test` since 0.7.0, which is why the
+  core's CI has been red on `main` since that release while the tag's publish
+  run, which does not run pint, went green.
 
 ### Changed
 

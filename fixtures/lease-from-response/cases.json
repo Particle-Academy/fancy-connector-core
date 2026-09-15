@@ -1,0 +1,144 @@
+{
+  "suite": "shared/lease-from-response",
+  "title": "Building a SubscriptionLease from the provider's create or renew response, by declaration",
+  "contract": {
+    "summary": "A subscription trigger DECLARES where its expiry sits in the provider's response and how the provider spells it, so a host can build the lease from the create (and renew) response without knowing the provider. `leaseFromResponse(declaration, response)` reads the path, converts the declared unit into an RFC 3339 instant in UTC at millisecond precision (fraction TRUNCATED, never rounded — an expiry a fraction early is the safe direction), and hands the result to the lease constructor, which applies its own refusals.",
+    "functions": {
+      "leaseFromResponse": "leaseFromResponse(declaration, response) -> {expiresAt, renewBeforeSeconds, renewOperation}"
+    },
+    "reference": "authored",
+    "referenceNote": "Two units, because two providers: Google Calendar's `expiration` is epoch MILLISECONDS carried as a JSON string (a JSON number is accepted too); Microsoft Graph's `expirationDateTime` is ISO 8601 with a SEVEN-digit fraction. A unit that no shipped provider spells is not in the vocabulary. The declared unit is never guessed around: an instant under `epoch-ms`, or digits under `rfc3339`, is refused, because a lease built from a misread expiry is one that expires unannounced. A runner returns `{refused: <field or path>}` for a refusal and `{lease: {expiresAt, renewBeforeSeconds, renewOperation}}` otherwise.",
+    "implementations": [
+      { "language": "node", "package": "@particle-academy/fancy-connector-core", "symbol": "leaseFromResponse from \"@particle-academy/fancy-connector-core\"" },
+      { "language": "php", "package": "particle-academy/fancy-connector-core", "symbol": "ParticleAcademy\\Connectors\\SubscriptionLease::fromResponse(LeaseDeclaration, array)" }
+    ]
+  },
+  "cases": [
+    {
+      "id": "0001-google-epoch-ms-string",
+      "title": "Google's channel `expiration` — epoch milliseconds as a JSON string — becomes an instant",
+      "input": {
+        "declaration": { "expiresAtFrom": "expiration", "expiresAtUnit": "epoch-ms", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" },
+        "response": { "kind": "api#channel", "id": "ch-1", "resourceId": "r-1", "expiration": "1789430400000" }
+      },
+      "expected": { "lease": { "expiresAt": "2026-09-15T00:00:00.000Z", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" } }
+    },
+    {
+      "id": "0002-epoch-ms-as-a-json-number",
+      "title": "The same epoch as a JSON number is the same instant",
+      "input": {
+        "declaration": { "expiresAtFrom": "expiration", "expiresAtUnit": "epoch-ms", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" },
+        "response": { "expiration": 1789430400000 }
+      },
+      "expected": { "lease": { "expiresAt": "2026-09-15T00:00:00.000Z", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" } }
+    },
+    {
+      "id": "0003-epoch-ms-keeps-its-milliseconds",
+      "title": "Milliseconds survive the conversion",
+      "input": {
+        "declaration": { "expiresAtFrom": "expiration", "expiresAtUnit": "epoch-ms", "renewBeforeSeconds": 3600, "renewOperation": "events_watch" },
+        "response": { "expiration": "1789430400123" }
+      },
+      "expected": { "lease": { "expiresAt": "2026-09-15T00:00:00.123Z", "renewBeforeSeconds": 3600, "renewOperation": "events_watch" } }
+    },
+    {
+      "id": "0004-graph-seven-digit-fraction-truncates-to-milliseconds",
+      "title": "Graph's `expirationDateTime` carries seven fractional digits; the lease keeps three, truncated",
+      "input": {
+        "declaration": { "expiresAtFrom": "expirationDateTime", "expiresAtUnit": "rfc3339", "renewBeforeSeconds": 3600, "renewOperation": "subscription_renew" },
+        "response": { "id": "7f105c7d", "expirationDateTime": "2026-09-22T18:23:45.9356913Z" }
+      },
+      "expected": { "lease": { "expiresAt": "2026-09-22T18:23:45.935Z", "renewBeforeSeconds": 3600, "renewOperation": "subscription_renew" } }
+    },
+    {
+      "id": "0005-offset-becomes-utc",
+      "title": "An instant with a numeric offset is stored in UTC",
+      "input": {
+        "declaration": { "expiresAtFrom": "expirationDateTime", "expiresAtUnit": "rfc3339", "renewBeforeSeconds": 3600, "renewOperation": "subscription_renew" },
+        "response": { "expirationDateTime": "2026-09-22T20:23:45+02:00" }
+      },
+      "expected": { "lease": { "expiresAt": "2026-09-22T18:23:45.000Z", "renewBeforeSeconds": 3600, "renewOperation": "subscription_renew" } }
+    },
+    {
+      "id": "0006-nested-path",
+      "title": "A dotted path reads into a nested object",
+      "input": {
+        "declaration": { "expiresAtFrom": "channel.expiration", "expiresAtUnit": "epoch-ms", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" },
+        "response": { "channel": { "expiration": "1789430400000" } }
+      },
+      "expected": { "lease": { "expiresAt": "2026-09-15T00:00:00.000Z", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" } }
+    },
+    {
+      "id": "0007-missing-path-is-refused",
+      "title": "A response without the declared field is refused, naming the path — never a lease with no expiry",
+      "input": {
+        "declaration": { "expiresAtFrom": "expiration", "expiresAtUnit": "epoch-ms", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" },
+        "response": { "kind": "api#channel", "id": "ch-1" }
+      },
+      "expected": { "refused": "expiration" }
+    },
+    {
+      "id": "0008-epoch-ms-that-is-not-a-number-is-refused",
+      "title": "Digits are the only spelling of an epoch",
+      "input": {
+        "declaration": { "expiresAtFrom": "expiration", "expiresAtUnit": "epoch-ms", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" },
+        "response": { "expiration": "soon" }
+      },
+      "expected": { "refused": "expiration" }
+    },
+    {
+      "id": "0009-rfc3339-unit-given-an-epoch-is-refused",
+      "title": "The declared unit is never guessed around: digits under `rfc3339` are refused",
+      "input": {
+        "declaration": { "expiresAtFrom": "expirationDateTime", "expiresAtUnit": "rfc3339", "renewBeforeSeconds": 3600, "renewOperation": "subscription_renew" },
+        "response": { "expirationDateTime": "1789430400000" }
+      },
+      "expected": { "refused": "expirationDateTime" }
+    },
+    {
+      "id": "0010-epoch-ms-unit-given-an-instant-is-refused",
+      "title": "…and an instant under `epoch-ms` is refused the same way",
+      "input": {
+        "declaration": { "expiresAtFrom": "expiration", "expiresAtUnit": "epoch-ms", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" },
+        "response": { "expiration": "2026-09-15T00:00:00Z" }
+      },
+      "expected": { "refused": "expiration" }
+    },
+    {
+      "id": "0011-non-integer-epoch-ms-is-refused",
+      "title": "An epoch with a fraction is not a millisecond count",
+      "input": {
+        "declaration": { "expiresAtFrom": "expiration", "expiresAtUnit": "epoch-ms", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" },
+        "response": { "expiration": 1789430400000.7 }
+      },
+      "expected": { "refused": "expiration" }
+    },
+    {
+      "id": "0012-zero-margin-is-refused-through-the-lease",
+      "title": "The lease's own refusals still apply: a zero margin is refused by name",
+      "input": {
+        "declaration": { "expiresAtFrom": "expiration", "expiresAtUnit": "epoch-ms", "renewBeforeSeconds": 0, "renewOperation": "events_watch" },
+        "response": { "expiration": "1789430400000" }
+      },
+      "expected": { "refused": "renewBeforeSeconds" }
+    },
+    {
+      "id": "0013-unknown-unit-is-refused",
+      "title": "A unit no provider spells is refused by name, not treated as one of the two",
+      "input": {
+        "declaration": { "expiresAtFrom": "expiration", "expiresAtUnit": "epoch-s", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" },
+        "response": { "expiration": "1789430400" }
+      },
+      "expected": { "refused": "expiresAtUnit" }
+    },
+    {
+      "id": "0014-null-at-the-path-is-refused",
+      "title": "A null at the declared path is absent, not an expiry",
+      "input": {
+        "declaration": { "expiresAtFrom": "expiration", "expiresAtUnit": "epoch-ms", "renewBeforeSeconds": 86400, "renewOperation": "events_watch" },
+        "response": { "expiration": null }
+      },
+      "expected": { "refused": "expiration" }
+    }
+  ]
+}

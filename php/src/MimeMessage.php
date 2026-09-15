@@ -13,9 +13,9 @@ namespace ParticleAcademy\Connectors;
 final class MimeMessage
 {
     /**
-     * @param list<array{name: string, value: string}> $headers
-     * @param list<array<string, mixed>> $parts
-     * @param list<array<string, mixed>> $attachments
+     * @param  list<array{name: string, value: string}>  $headers
+     * @param  list<array<string, mixed>>  $parts
+     * @param  list<array<string, mixed>>  $attachments
      */
     public function __construct(
         public readonly array $headers,

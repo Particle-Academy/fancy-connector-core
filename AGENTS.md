@@ -244,6 +244,41 @@ differently on one side. The table was authored here and LANDED there in
 0.26.0; the local copy is gone, because a second copy agrees with the first
 right up until somebody edits one of them.
 
+**A subscription trigger DECLARES its lease** (`TriggerDescriptor.lease`, a
+`LeaseDeclaration` / `LeaseDeclaration.php`): where the provider's expiry sits
+in the create-or-renew response (`expiresAtFrom`, a dotted path) and how the
+provider spells it (`expiresAtUnit`: `rfc3339` for Graph's
+`expirationDateTime`, `epoch-ms` for Google's channel `expiration` — two
+units because two providers, and a unit no shipped provider spells is not in
+the vocabulary), plus the margin and the renew operation. `leaseFromResponse`
+/ `SubscriptionLease::fromResponse` is the ONE conversion: it never guesses
+around the declared unit (digits under `rfc3339`, an instant under `epoch-ms`,
+a missing or null path — all refused, naming the path), stores the expiry in
+UTC at MILLISECOND precision with the fraction TRUNCATED (Graph writes seven
+digits; PHP's parser stops at six; an expiry a fraction early is the safe
+direction), and hands the result to the lease, whose own refusals still
+apply. Both runtimes read `fixtures/lease-from-response/cases.json`, the seed
+of the conformance suite of that name.
+
+**Not every provider signs.** Google Calendar echoes the channel's `token` in
+`X-Goog-Channel-Token` on every notification, with an EMPTY body; Microsoft
+Graph echoes `clientState` inside EVERY item of a notification's `value`
+array. `SharedTokenScheme` (`verifySharedToken` /
+`WebhookVerifier::verifySharedToken`) is the second verification kind beside
+HMAC — same refusal-by-default (no secret configured is a failure, never an
+accept), same result shape, constant-time comparison. A body path is dotted
+and a `[]` segment means every element, all of which must match: one wrong
+item refuses the whole batch, and an empty collection carries no token.
+`WebhookVerificationSpec` is now a union of the HMAC spec and the token spec;
+`verifyDelivery` dispatches on it, and `isSharedTokenSpec` narrows it for a
+host that reads the spec itself. Graph's `validationToken` challenge on
+subscription creation is a `ChallengeHandshake` on the spec —
+`{kind: "echo-query", param: "validationToken"}` — and `handshakeResponse` /
+`WebhookVerifier::handshakeResponse` is the pure half: what to answer (200,
+`text/plain`, the decoded token), or nothing when the request is not a
+challenge. The host's routing layer asks it before mounting the route. Both
+runtimes read `fixtures/shared-token/cases.json`.
+
 **A webhook trigger may declare a payload TRANSFORM**, and the first one is
 raw MIME → headers, parts and attachments (`src/mime.ts` / `Mime.php`), for
 inbound email. Written from scratch — no third-party parser in either runtime
