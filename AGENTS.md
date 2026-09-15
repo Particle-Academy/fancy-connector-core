@@ -222,6 +222,24 @@ rather than remembered:
 - **Absent stays absent** in metrics: use `reported()`, which drops non-numbers.
   A zero says "nothing happened"; an absence says "we don't know".
 
+**A trigger declares HOW it learns things** (`src/trigger.ts`,
+`DeliveryMechanism`), and one mechanism carries a duty the others do not: a
+`subscription` is a webhook the provider stops delivering unless somebody
+renews it, forever, and if nobody does the workflow stops firing with no error
+anywhere. `src/lease.ts` / `SubscriptionLease.php` is the value for that duty —
+the provider's expiry as an RFC 3339 instant (the CONNECTOR converts Google's
+epoch milliseconds or Graph's ISO string on the way in; the lease refuses to
+guess units), the connector's `renewBeforeSeconds` (positive, or `due` is
+unreachable), and the `renewOperation` the host calls when due (a renew for
+Graph; the create again for a Google channel, which cannot be renewed). Two
+verbs: `leaseState` says where it IS — `due` inclusive at renewAt, `expired`
+inclusive at expiresAt and winning over `due` — and `leaseAction` says what the
+host DOES: `none`, `renew`, or `resync`. A missed lease is `resync`, never a
+quiet re-create: notifications during the gap are gone, so the host re-lists
+AND re-subscribes. The boundaries are decided, not measured, and both runtimes
+read them from `fixtures/subscription-lease/cases.json` — one table, so a
+boundary cannot be decided differently on one side.
+
 ---
 
 ## The principle underneath three separate rules

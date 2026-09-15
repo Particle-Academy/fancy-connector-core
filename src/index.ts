@@ -35,6 +35,7 @@ export * from "./drift";
 export * from "./errors";
 export * from "./faker";
 export * from "./idempotency";
+export * from "./lease";
 export * from "./metrics";
 export * from "./mode";
 export * from "./probe";
