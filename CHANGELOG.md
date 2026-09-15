@@ -6,6 +6,26 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.6.2] - 2026-09-14
+
+### Fixed
+
+- **Three remedies that could not be followed are gone, and a test now refuses
+  any string that names a command, package or script that does not exist.**
+  `ConnectorApiMismatch` for a connector behind the window told the reader to
+  run `npx fancy-cli@latest add connector <id>` — there is no such command; it
+  now says to move the connector to a release written for this core (upgrade
+  its `-js`/`-php` package, or regenerate a vendored copy from that release).
+  `index.ts` opened by naming `@particle-academy/fancy-connectors`, a package
+  that was never published and whose vendored catalogue is retired (the owner,
+  2026-09-14 — every connector is a generated package from the Fancy-Friends
+  estate, and this core is Weaver's). And the banner `scripts/vendor.mjs`
+  writes into every generated file said to re-run `php artisan flow:build`,
+  which regenerates nothing; it now names `vendor.mjs` itself. **What to do:**
+  nothing at runtime; a host carrying a vendored `_connector` copy regenerates
+  it with `node scripts/vendor.mjs --target <dir>` on its next core update, and
+  its drift check will say so.
+
 ## [0.6.1] - 2026-09-13
 
 ### Fixed
