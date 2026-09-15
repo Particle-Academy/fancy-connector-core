@@ -444,6 +444,14 @@ host that installs things gets the package. One source, two channels, and a
 banner in every generated file so a hand edit there is visible rather than
 silently discarded at the next build.
 
+**A formatter does not read the banner.** `pint --dirty` in the sandbox
+reformatted the vendored `WebhookVerifier.php` — unary spacing, blank lines —
+and `vendor.mjs --check` went red on a file nobody had edited (Fancy,
+2026-09-15). The check is byte-for-byte on purpose, so a consumer vendoring
+the runtime into a PHP project with a formatter EXCLUDES the vendored
+directory from it; the sandbox's `pint.json` does. The same goes for any
+JS/TS formatter over the `_connector/js` copy.
+
 ## Commands
 
 | | |
