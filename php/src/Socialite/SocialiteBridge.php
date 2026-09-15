@@ -25,7 +25,7 @@ use ParticleAcademy\Connectors\ResolvedConnection;
  * | | owns |
  * |---|---|
  * | **Socialite** | the redirect, the callback, the code exchange, refresh where its driver implements one, and the identity |
- * | **fancy-connectors** | everything after a token exists — the request, the auth placement, the failure classification, idempotency, rendering, measurement, drift |
+ * | **the connector** (a generated `-php` package on this core) | everything after a token exists — the request, the auth placement, the failure classification, idempotency, rendering, measurement, drift |
  *
  * This class is the mapper between them: a Socialite user in, the credential map
  * a `ProviderAdapter` declared out. It is not a wrapper, and it deliberately

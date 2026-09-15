@@ -57,12 +57,12 @@ const VENDORED_PHP_NAMESPACE = "FancyFlow\\Nodes\\Connector";
  */
 const banner = (source) =>
   `// GENERATED from @particle-academy/fancy-connector-core — ${source}\n` +
-  `// Do not edit here. Fix it in the package and re-run \`php artisan flow:build\`;\n` +
+  `// Do not edit here. Fix it in the package and re-run \`node scripts/vendor.mjs --target <this directory>\` there;\n` +
   `// a test fails the build when this copy and the package disagree.\n`;
 
 const phpBanner = (source) =>
   `// GENERATED from particle-academy/fancy-connector-core — ${source}\n` +
-  `// Do not edit here. Fix it in the package and re-run \`php artisan flow:build\`;\n` +
+  `// Do not edit here. Fix it in the package and re-run \`node scripts/vendor.mjs --target <this directory>\` there;\n` +
   `// a test fails the build when this copy and the package disagree.\n`;
 
 function tsFiles(dir) {

@@ -1,5 +1,5 @@
 /**
- * `@particle-academy/fancy-connectors` — the runtime under every Fancy
+ * `@particle-academy/fancy-connector-core` — the runtime under every Fancy
  * connector.
  *
  * ## What this is

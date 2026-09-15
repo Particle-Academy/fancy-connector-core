@@ -222,7 +222,9 @@ entirely. That is the whole argument.
 
 - [`AGENTS.md`](./AGENTS.md) — the invariants, the traps, and what a change here
   breaks.
-- `.ai/plans/fancy-connectors.md` in the envelope — the architecture, the
-  Socialite seam, the drift research, and every decision with its reason.
+- `RULES.md` in [`Fancy-Friends/weaver.agi`](https://github.com/Fancy-Friends/weaver.agi)
+  — the estate every connector is generated from (one definition → four
+  packages), its invariants, and the process rules this core follows since it
+  became Weaver's on 2026-09-14.
 
 MIT.

@@ -1,12 +1,13 @@
 # AGENTS.md — fancy-connector-core
 
-The runtime under every Fancy connector, and the connector catalogue that sits on
-it. Matched TypeScript + PHP, one repo, **zero runtime dependencies in either
-ecosystem.**
+The runtime under every Fancy connector. Matched TypeScript + PHP, one repo,
+**zero runtime dependencies in either ecosystem.**
 
-`CLAUDE.md` is a symlink to this file. Process rules — publishing, versioning,
-backports, the kit lifecycle — live in the envelope's `AGENTS.md`, never here.
-This file describes THIS REPO'S CODE.
+`CLAUDE.md` is a symlink to this file. **This repo is Weaver's** (the owner,
+2026-09-14: "weaver handles ALL fancy connectors"): process rules — publishing,
+versioning, the third-party bar, the release cycle — live in
+`Fancy-Friends/weaver.agi`'s `RULES.md`, never here. Fancy reviews for
+alignment with the rest of the ecosystem. This file describes THIS REPO'S CODE.
 
 ---
 
@@ -20,17 +21,24 @@ php/tests/      Pest
 scripts/        vendor.mjs — generates the flow-node marketplace's _connector/
 ```
 
-**The connector CATALOGUE is a different repository** — `fancy-connectors`. This
-one is the runtime; that one is the connectors written on it, shipped as
-vendored source. They release on separate clocks on purpose: a provider changing
-its API is a connector fix and must not wait on a core release.
+**The connectors live in a different place** — `Fancy-Friends/weaver.agi`
+generates every one of them from a single provider definition into four
+published packages (`@particle-academy/<slug>-ui`, `-js`,
+`particle-academy/<slug>-php`, `fancy-<slug>`), each depending on this core by
+range. This one is the runtime; those are the connectors written on it. (A
+vendored catalogue repo once sat beside this one; the owner retired it on
+2026-09-14 — a copy cannot be upgraded, and third-party APIs change.) They
+release on separate clocks on purpose: a provider changing its API is a
+connector fix and must not wait on a core release.
 
 `CONNECTOR_API_VERSION` in `src/compat.ts` is what makes that safe. Read it
-before changing anything a connector can see.
+before changing anything a connector can see. The consumers to run before
+tagging a core release are the generated packages: `weaver.agi`'s
+`php-flow-executors` and `typescript` suites drive every emitted executor
+against the published core.
 
-Design doc, and the reasoning behind every decision here:
-[`.ai/plans/fancy-connectors.md`](../../.ai/plans/fancy-connectors.md) in the
-envelope.
+Design doc, and the reasoning behind every decision here: `RULES.md` in
+`Fancy-Friends/weaver.agi`, and this file's sections below.
 
 ---
 

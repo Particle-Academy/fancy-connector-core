@@ -53,11 +53,14 @@ test("a connector NEWER than the core says to upgrade the CORE", () => {
 test("a connector OLDER than the window says to re-vendor the CONNECTOR", () => {
   const error = refusal(() => assertConnectorApi("bluesky", 0));
 
-  assert.ok(error.message.includes("re-vendor"));
+  assert.ok(error.message.includes("The CONNECTOR is behind"));
   assert.ok(
-    error.message.includes("fancy-cli"),
+    error.message.includes("release written for this core") && error.message.includes("bluesky-js"),
     "naming which side is behind is the whole point — the two cases need opposite actions",
   );
+  // It once named `npx fancy-cli@latest add connector`, a command that does
+  // not exist; a remedy that fails when followed costs the outage twice.
+  assert.ok(!error.message.includes("fancy-cli"));
   assert.ok(
     !error.message.includes("upgrade @particle-academy/fancy-connector-core"),
     "and it must not offer the other direction as well, which is how someone does both and fixes neither",
