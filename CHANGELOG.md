@@ -6,6 +6,17 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [Unreleased]
+
+### Changed
+
+- **The subscription-lease table is read from fancy-conformance 0.26.0**
+  (`shared/subscription-lease`), through the package's own `runTable` in both
+  runtimes, and `fixtures/subscription-lease/cases.json` is gone — it was the
+  seed of that suite and landed there unchanged, so keeping it would have been
+  a second table that agrees with the first until somebody edits one. Tests
+  and dev-dependencies only; nothing a consumer installs moved.
+
 ## [0.7.0] - 2026-09-15
 
 Two additions to the connector vocabulary, both approved by the owner on

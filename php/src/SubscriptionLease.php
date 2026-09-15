@@ -35,8 +35,9 @@ use DateTimeZone;
  *
  * - {@see state()} — where the lease IS. {@see action()} — what the host DOES.
  *
- * The boundaries are DECIDED, not measured, and pinned in
- * `fixtures/subscription-lease/cases.json`, which the TypeScript twin reads too.
+ * The boundaries are DECIDED, not measured, and pinned in fancy-conformance's
+ * `shared/subscription-lease` suite, which drives the TypeScript twin too
+ * (`php/tests/SubscriptionLeaseTest.php` and its node mirror).
  */
 final class SubscriptionLease
 {

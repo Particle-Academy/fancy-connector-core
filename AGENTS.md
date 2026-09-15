@@ -237,8 +237,12 @@ inclusive at expiresAt and winning over `due` — and `leaseAction` says what th
 host DOES: `none`, `renew`, or `resync`. A missed lease is `resync`, never a
 quiet re-create: notifications during the gap are gone, so the host re-lists
 AND re-subscribes. The boundaries are decided, not measured, and both runtimes
-read them from `fixtures/subscription-lease/cases.json` — one table, so a
-boundary cannot be decided differently on one side.
+are driven through fancy-conformance's `shared/subscription-lease` suite —
+its own `runTable`, never a transcription of the rows, with the pin printed
+and asserted by both tests — one table, so a boundary cannot be decided
+differently on one side. The table was authored here and LANDED there in
+0.26.0; the local copy is gone, because a second copy agrees with the first
+right up until somebody edits one of them.
 
 **A webhook trigger may declare a payload TRANSFORM**, and the first one is
 raw MIME → headers, parts and attachments (`src/mime.ts` / `Mime.php`), for

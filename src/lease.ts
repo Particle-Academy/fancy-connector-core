@@ -30,7 +30,8 @@
  *   the host must re-list (sync token or full) AND re-subscribe.
  *
  * The boundaries are DECIDED, not measured, and they are pinned in
- * `fixtures/subscription-lease/cases.json`, which the PHP twin reads too.
+ * fancy-conformance's `shared/subscription-lease` suite, which drives the PHP
+ * twin too (`tests/subscription-lease.test.ts` and its Pest mirror).
  */
 import { ConnectorConfigError, type ConnectorErrorContext } from "./errors";
 

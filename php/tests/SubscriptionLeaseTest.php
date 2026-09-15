@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use ParticleAcademy\Conformance\Conformance;
 use ParticleAcademy\Connectors\ConnectorConfigException;
 use ParticleAcademy\Connectors\LeaseAction;
 use ParticleAcademy\Connectors\LeaseState;
@@ -10,47 +11,61 @@ use ParticleAcademy\Connectors\SubscriptionLease;
 /**
  * A subscription that EXPIRES, and when the host must act on it.
  *
- * Driven from `fixtures/subscription-lease/cases.json`, which
- * `tests/subscription-lease.test.ts` reads too — one table, two runtimes, so a
- * boundary decided differently on one side fails here rather than in a host.
- * Mirrors that file.
+ * The table is fancy-conformance's `shared/subscription-lease` suite — authored
+ * here, landed there in 0.26.0 unchanged, and no longer held here, so the two
+ * runtimes cannot decide a boundary differently and neither can a local copy
+ * drift from the table. Run through the package's own `runTable`, never a
+ * transcription of its rows. Mirrors `tests/subscription-lease.test.ts`.
  */
-$table = json_decode((string) file_get_contents(__DIR__.'/../../fixtures/subscription-lease/cases.json'), true, 512, JSON_THROW_ON_ERROR);
-$cases = $table['cases'];
+const LEASE_SUITE_PINNED = '0.26.0';
+const LEASE_SUITE = 'shared/subscription-lease';
 
-it('reads a usable table: 13 cases, unique ids, every non-refused case states all three expectations', function () use ($cases) {
-    expect($cases)->toHaveCount(13);
-    expect(count(array_unique(array_column($cases, 'id'))))->toBe(count($cases));
-    foreach ($cases as $case) {
-        if (isset($case['expected']['refused'])) {
-            continue;
-        }
-        expect($case['expected'])->toHaveKeys(['renewAt', 'state', 'action']);
+/**
+ * What the suite's manifest says a runner returns: `{refused: <field>}` when
+ * constructing the lease is refused, `{renewAt, state, action}` otherwise. The
+ * refused field is read off the exception, whose message leads with it.
+ *
+ * @param  array<string,mixed>  $case
+ * @return array<string,string>
+ */
+function driveLeaseCase(array $case): array
+{
+    $in = $case['input'];
+
+    try {
+        $lease = SubscriptionLease::of($in['expiresAt'], $in['renewBeforeSeconds'], $in['renewOperation']);
+    } catch (ConnectorConfigException $e) {
+        preg_match('/^(\w+)/', $e->getMessage(), $m);
+
+        return ['refused' => $m[1] ?? ''];
     }
+
+    return [
+        'renewAt' => $lease->renewAt(),
+        'state' => $lease->state($in['now'])->value,
+        'action' => $lease->action($in['now'])->value,
+    ];
+}
+
+it('reads the table from the pinned fancy-conformance through its loader, and holds no copy of it', function () {
+    fwrite(STDERR, "\nfancy-conformance ".Conformance::version().' (core pins '.LEASE_SUITE_PINNED.")\n");
+
+    expect(Conformance::version())->toBe(LEASE_SUITE_PINNED, 'the installed fancy-conformance is not the version this test pins — bump the pin deliberately');
+    expect(array_column(Conformance::manifest(LEASE_SUITE)['contract']['implementations'], 'language'))->toContain('php');
+    expect(is_dir(__DIR__.'/../../fixtures/subscription-lease'))->toBeFalse('a local copy of the table is back — one table, in one place');
 });
 
-foreach ($cases as $case) {
-    it("{$case['id']}: {$case['title']}", function () use ($case) {
-        $in = $case['input'];
+it('passes every row of shared/subscription-lease on php, and skips none', function () {
+    $summary = Conformance::runTable(LEASE_SUITE, driveLeaseCase(...), 'php');
+    $report = Conformance::formatSummary($summary);
+    fwrite(STDERR, "\n{$report}\n");
 
-        if (isset($case['expected']['refused'])) {
-            try {
-                SubscriptionLease::of($in['expiresAt'], $in['renewBeforeSeconds'], $in['renewOperation']);
-            } catch (ConnectorConfigException $e) {
-                expect($e->getMessage())->toContain($case['expected']['refused']);
-
-                return;
-            }
-            throw new RuntimeException("{$case['id']}: expected a ConnectorConfigException naming {$case['expected']['refused']}");
-        }
-
-        $lease = SubscriptionLease::of($in['expiresAt'], $in['renewBeforeSeconds'], $in['renewOperation']);
-
-        expect($lease->renewAt())->toBe($case['expected']['renewAt']);
-        expect($lease->state($in['now']))->toBe(LeaseState::from($case['expected']['state']));
-        expect($lease->action($in['now']))->toBe(LeaseAction::from($case['expected']['action']));
-    });
-}
+    // Not `ok` alone: a table that skipped every row, or read no rows, is ok too.
+    expect($summary['skipped'])->toBe(0, "php is a listed implementation, so no row may skip it:\n{$report}");
+    expect($summary['failed'])->toBe(0, $report);
+    expect($summary['passed'])->toBe(count(Conformance::cases(LEASE_SUITE)));
+    expect($summary['passed'])->toBeGreaterThan(0, 'the loader read no rows');
+});
 
 it('accepts now as a DateTimeInterface as well as an instant string, meaning the same thing', function () {
     $lease = SubscriptionLease::of('2026-09-22T00:00:00Z', 86400, 'subscription_renew');
