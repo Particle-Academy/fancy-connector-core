@@ -270,8 +270,12 @@ accept), same result shape, constant-time comparison. A body path is dotted
 and a `[]` segment means every element, all of which must match: one wrong
 item refuses the whole batch, and an empty collection carries no token.
 `WebhookVerificationSpec` is now a union of the HMAC spec and the token spec;
-`verifyDelivery` dispatches on it, and `isSharedTokenSpec` narrows it for a
-host that reads the spec itself. Graph's `validationToken` challenge on
+`verifyDelivery` dispatches on the scheme's NAMED `kind` — `"shared-token"`,
+`"hmac"`, or absent (every pre-0.8.0 scheme, and it means HMAC) — and REFUSES
+any other name rather than treating "has no kind" as HMAC, so a third scheme
+cannot be verified as one by forgetting to say what it is. `isSharedTokenSpec`
+narrows the union for a host that reads the spec itself; the discriminant is
+nested, so TypeScript will not narrow it on `spec.scheme.kind` alone. Graph's `validationToken` challenge on
 subscription creation is a `ChallengeHandshake` on the spec —
 `{kind: "echo-query", param: "validationToken"}` — and `handshakeResponse` /
 `WebhookVerifier::handshakeResponse` is the pure half: what to answer (200,

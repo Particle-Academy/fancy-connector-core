@@ -129,6 +129,30 @@ test("verifyDelivery still runs an HMAC spec exactly as before", async () => {
   );
 });
 
+test("a scheme kind nobody serves is REFUSED by name, never verified as HMAC", async () => {
+  // Fancy's alignment review of 0.8.0: `"kind" in scheme` treated "has no
+  // kind" as HMAC, so a third scheme that forgot its kind would have been
+  // verified as one. Absent still means HMAC — every pre-0.8.0 scheme is one
+  // — and an explicit "hmac" is the same; anything else is a refusal.
+  const raw = '{"id":"evt_1"}';
+  const sig = await hmac("whsec", raw, "SHA-256");
+  const base = { service: "acme", operation: "webhook", delivery: "webhook" as const, setup: "Add an endpoint.", faker };
+
+  const explicit: TriggerDescriptor = {
+    ...base,
+    verification: { signatureHeader: "Acme-Signature", scheme: { kind: "hmac", algorithm: "SHA-256", payload: (r: string) => r } },
+  };
+  assert.deepEqual(await verifyDelivery(explicit, { raw, headers: { "acme-signature": sig } }, "whsec"), { ok: true });
+
+  const unknown: TriggerDescriptor = {
+    ...base,
+    verification: { signatureHeader: "Acme-Signature", scheme: { kind: "jwt", algorithm: "SHA-256", payload: (r: string) => r } as never },
+  };
+  const verdict = await verifyDelivery(unknown, { raw, headers: { "acme-signature": sig } }, "whsec");
+  assert.equal(verdict.ok, false);
+  assert.match((verdict as { reason: string }).reason, /scheme "jwt"/);
+});
+
 test("the handshake echoes the challenge as plain text, and only when the challenge is there", () => {
   const handshake = graphLike.verification && "handshake" in graphLike.verification ? graphLike.verification.handshake : undefined;
 

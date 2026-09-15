@@ -6,6 +6,19 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.8.1] - 2026-09-15
+
+### Changed
+
+- **`verifyDelivery` dispatches on a NAMED scheme kind and refuses one it does
+  not know.** `HmacScheme` gains an optional `kind?: "hmac"`; absent still
+  means HMAC, because every scheme written before 0.8.0 is one, and
+  `"shared-token"` still goes to the token check — but any other value is now
+  refused by name (`declares a verification scheme "jwt" this runtime does not
+  know`) rather than verified as HMAC. From Fancy's alignment review of
+  0.8.0: `"kind" in scheme` had made refusal-by-default depend on every future
+  scheme remembering to declare a kind. Connectors compile unchanged.
+
 ## [0.8.0] - 2026-09-15
 
 The declaration half of the subscription vocabulary (Tynn #15), so a
