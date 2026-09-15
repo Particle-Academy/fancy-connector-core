@@ -269,6 +269,17 @@ HMAC — same refusal-by-default (no secret configured is a failure, never an
 accept), same result shape, constant-time comparison. A body path is dotted
 and a `[]` segment means every element, all of which must match: one wrong
 item refuses the whole batch, and an empty collection carries no token.
+**An HMAC key is BYTES, and a delivery may carry several signatures.** Svix
+(Resend) hands out `whsec_<base64>` and the key is the DECODED remainder —
+half of it not valid UTF-8 — so `HmacScheme.secretEncoding: "base64"` +
+`secretPrefix: "whsec_"` decode before signing (`secretKeyBytes`), refusing a
+missing prefix or invalid base64 BY NAME rather than signing with the wrong
+key and failing like a wrong secret; `utf8` stays the default. And `verifyHmac`
+takes a LIST: Stripe signs once per active secret while a secret is rolled
+and says compare against EACH, Svix's header "could be any number of
+signatures" — a first-only rule refused a whole roll as `signature did not
+match`. Both runtimes read `fixtures/signed-delivery/cases.json`, whose
+signatures were computed by the providers' own rules, not by this code.
 `WebhookVerificationSpec` is now a union of the HMAC spec and the token spec;
 `verifyDelivery` dispatches on the scheme's NAMED `kind` — `"shared-token"`,
 `"hmac"`, or absent (every pre-0.8.0 scheme, and it means HMAC) — and REFUSES

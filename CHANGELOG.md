@@ -6,6 +6,48 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.9.0] - 2026-09-15
+
+The verification half of Tynn #11 (Resend inbound email, signed by Svix),
+for the two providers that make it vocabulary: Svix and Stripe, both read
+from their own pages on 2026-09-15. Additive in both runtimes;
+`CONNECTOR_API_VERSION` stays at 1.
+
+### Added
+
+- **`HmacScheme.secretEncoding` (`utf8` | `base64`) and `secretPrefix`**, with
+  `secretKeyBytes()` / `WebhookVerifier::secretKeyBytes()`. Svix hands out
+  `whsec_<base64>`: the HMAC key is the DECODED remainder, raw bytes, half of
+  which are not valid UTF-8 — encoding the text signed with the wrong key and
+  failed exactly like a wrong secret. `utf8` stays the default, byte for
+  byte what 0.8.x did. A secret without its declared prefix, or a base64 one
+  that is not base64, is refused BY NAME (`signing secret does not start with
+  "whsec_"`, `signing secret is not valid base64`) before anything is signed.
+- **`verifyHmac` accepts a LIST of signatures and the delivery passes when
+  ANY matches**; `WebhookVerificationSpec.parse` may return `signatures`
+  beside the 0.8.x `signature`. Stripe signs once per active secret while a
+  secret is rolled and says to compare against EACH; Svix's header "could be
+  any number of signatures" of which yours must match one. An empty list is
+  no signature, never a vacuous match.
+- **`fixtures/signed-delivery/cases.json`** — 14 authored rows, every
+  signature computed by the provider's own rule with `node:crypto` rather
+  than by the code under test: Svix valid, a rotation where only the SECOND
+  signature is current, none current, at and outside the replay window, the
+  secret as text (never matches), a missing prefix and invalid base64 (both
+  named), no signature, no secret; Stripe valid, a roll, a re-serialised
+  body, a missing timestamp. Both runtimes read it; the seed of the
+  conformance suite of that name.
+
+### Fixed
+
+- **A first-only signature rule fails a whole secret roll.** `verifyDelivery`
+  passed only the FIRST signature a header carried, so during Stripe's
+  24-hour roll (or a Svix rotation) every delivery whose first `v1` came
+  from the new secret was refused as `signature did not match` — which reads
+  as a wrong secret, on a day the secret was just changed. Found by Fancy's
+  review of the #11 design; the emitted parsers in weaver.agi collect every
+  signature from the same change on.
+
 ## [0.8.1] - 2026-09-15
 
 ### Changed

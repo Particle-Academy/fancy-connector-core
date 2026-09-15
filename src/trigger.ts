@@ -72,8 +72,11 @@ export type HmacVerificationSpec = {
   /**
    * Some schemes pack the timestamp INTO the signature header
    * (Stripe: `t=…,v1=…`). Given the raw header value, return the parts.
+   * `signatures` carries EVERY signature the header held (a provider rolling
+   * a secret sends one per active secret); `signature` alone is the 0.8.x
+   * shape and still means one.
    */
-  parse?: (raw: string) => { signature?: string; timestamp?: string };
+  parse?: (raw: string) => { signature?: string; signatures?: string[]; timestamp?: string };
   /** A challenge the provider makes before it will deliver anything. */
   handshake?: ChallengeHandshake;
 };
@@ -145,7 +148,7 @@ export async function verifyDelivery(
 
   return verifyHmac({
     raw: delivery.raw,
-    signature: parsed.signature,
+    signature: parsed.signatures ?? parsed.signature,
     secret,
     scheme: spec.scheme,
     timestamp,

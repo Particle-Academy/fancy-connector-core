@@ -1,0 +1,376 @@
+{
+  "suite": "shared/signed-delivery",
+  "title": "Verifying an HMAC-signed delivery: the signed content, the key's spelling, rotation, replay",
+  "contract": {
+    "summary": "`verifyHmac` (TS) / `WebhookVerifier::verify` (PHP): the provider signs `payload` (a template over {id}, {timestamp} and {body}) with a key the secret spells (`secretEncoding` utf8 | base64, after `secretPrefix`), sends one or MORE signatures, and the delivery is accepted when any one matches inside the replay window.",
+    "functions": {
+      "verifyHmac": "verifyHmac({raw, signature: string | string[], secret, scheme, timestamp, now}) -> {ok: true} | {ok: false, reason}"
+    },
+    "reference": "authored",
+    "referenceNote": "Two providers, checked against their own pages on 2026-09-15. Svix (Resend): signed content `${svix-id}.${svix-timestamp}.${body}`, HMAC-SHA256, base64 signature, secret `whsec_<base64>` DECODED to key bytes, header `svix-signature` a space-separated list of `v1,<sig>` that 'could be any number of signatures' of which yours must match one. Stripe: `${t}.${body}`, hex, text key, and while a secret is rolled 'Stripe generates one signature for each secret' and says compare against EACH. Hence: ANY match accepts; a first-only rule fails a roll for 24 hours and reads like a wrong secret. The replay window is the implementer's choice (Svix says so); 300 s here. Reasons are fixed strings. A runner builds `payload` from the template with the row's `id` and `timestamp`, passes `signatures` as the list (an empty list is no signature), and returns the verification result verbatim.",
+    "implementations": [
+      {
+        "language": "node",
+        "package": "@particle-academy/fancy-connector-core",
+        "symbol": "verifyHmac from \"@particle-academy/fancy-connector-core\""
+      },
+      {
+        "language": "php",
+        "package": "particle-academy/fancy-connector-core",
+        "symbol": "ParticleAcademyConnectorsWebhookVerifier::verify(raw, signature, secret, payload, algorithm, tolerance, timestamp, now, encoding, secretEncoding, secretPrefix)"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "0001-svix-valid",
+      "title": "Svix: id.timestamp.body, a whsec_ base64 key, a base64 signature — accepted",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{id}.{timestamp}.{body}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "secretEncoding": "base64",
+          "secretPrefix": "whsec_"
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "U9MJNDKBCED9YuO9M3nQoR1gZcADfXpTeEPzXZ80mnI="
+        ],
+        "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "0002-svix-rotation-second-matches",
+      "title": "Svix rotation: two signatures, only the SECOND from the current secret — accepted",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{id}.{timestamp}.{body}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "secretEncoding": "base64",
+          "secretPrefix": "whsec_"
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "R+Ztwf8PEhFnAE6VTHJWH59eIrKcehXgEGvDaSHXqO8=",
+          "U9MJNDKBCED9YuO9M3nQoR1gZcADfXpTeEPzXZ80mnI="
+        ],
+        "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "0003-svix-rotation-none-match",
+      "title": "Svix rotation: two signatures, neither from the current secret — refused",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{id}.{timestamp}.{body}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "secretEncoding": "base64",
+          "secretPrefix": "whsec_"
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "R+Ztwf8PEhFnAE6VTHJWH59eIrKcehXgEGvDaSHXqO8=",
+          "R+Ztwf8PEhFnAE6VTHJWH59eIrKcehXgEGvDaSHXqO8="
+        ],
+        "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0004-svix-outside-tolerance",
+      "title": "The same valid signature, presented 301 s later — refused as a replay",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{id}.{timestamp}.{body}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "secretEncoding": "base64",
+          "secretPrefix": "whsec_"
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265631,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "U9MJNDKBCED9YuO9M3nQoR1gZcADfXpTeEPzXZ80mnI="
+        ],
+        "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "delivery is outside the 300s replay window"
+      }
+    },
+    {
+      "id": "0005-svix-at-tolerance",
+      "title": "Exactly 300 s later is still inside the window (the boundary is inclusive)",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{id}.{timestamp}.{body}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "secretEncoding": "base64",
+          "secretPrefix": "whsec_"
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265630,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "U9MJNDKBCED9YuO9M3nQoR1gZcADfXpTeEPzXZ80mnI="
+        ],
+        "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "0006-svix-secret-as-text-never-matches",
+      "title": "The same whsec_ secret with NO secretEncoding signs with the wrong key — refused, and it reads like a wrong secret",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{id}.{timestamp}.{body}",
+          "encoding": "base64",
+          "tolerance": 300
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "U9MJNDKBCED9YuO9M3nQoR1gZcADfXpTeEPzXZ80mnI="
+        ],
+        "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0007-svix-missing-prefix-is-named",
+      "title": "A secret without the declared whsec_ prefix is refused BY NAME, never decoded as if it had one",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{id}.{timestamp}.{body}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "secretEncoding": "base64",
+          "secretPrefix": "whsec_"
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "U9MJNDKBCED9YuO9M3nQoR1gZcADfXpTeEPzXZ80mnI="
+        ],
+        "secret": "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signing secret does not start with \"whsec_\""
+      }
+    },
+    {
+      "id": "0008-svix-invalid-base64-is-named",
+      "title": "A prefixed secret that is not base64 is refused by name, not treated as text",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{id}.{timestamp}.{body}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "secretEncoding": "base64",
+          "secretPrefix": "whsec_"
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "U9MJNDKBCED9YuO9M3nQoR1gZcADfXpTeEPzXZ80mnI="
+        ],
+        "secret": "whsec_not*base64*at*all"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signing secret is not valid base64"
+      }
+    },
+    {
+      "id": "0009-svix-no-signature",
+      "title": "No signature at all — refused",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{id}.{timestamp}.{body}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "secretEncoding": "base64",
+          "secretPrefix": "whsec_"
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [],
+        "secret": "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "delivery carried no signature header"
+      }
+    },
+    {
+      "id": "0010-svix-no-secret",
+      "title": "No secret configured — refused, never accepted as unconfigured",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{id}.{timestamp}.{body}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "secretEncoding": "base64",
+          "secretPrefix": "whsec_"
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "U9MJNDKBCED9YuO9M3nQoR1gZcADfXpTeEPzXZ80mnI="
+        ],
+        "secret": null
+      },
+      "expected": {
+        "ok": false,
+        "reason": "no signing secret configured for this trigger"
+      }
+    },
+    {
+      "id": "0011-stripe-valid",
+      "title": "Stripe: timestamp.body, a text key, a hex signature — accepted",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{timestamp}.{body}",
+          "encoding": "hex",
+          "tolerance": 300
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "b540e1a5b5a47a3377021b8a104ad6cac0d4cb9c8a9f8c7d54514aa036cc5bce"
+        ],
+        "secret": "whsec_stripe_test"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "0012-stripe-rotation-second-matches",
+      "title": "Stripe roll: one signature per active secret, the CURRENT one second — accepted",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{timestamp}.{body}",
+          "encoding": "hex",
+          "tolerance": 300
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "8d4e022d6adbf789ff636ad5af2e97bb631d55d0f1efea57bc968756dbbb9d82",
+          "b540e1a5b5a47a3377021b8a104ad6cac0d4cb9c8a9f8c7d54514aa036cc5bce"
+        ],
+        "secret": "whsec_stripe_test"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "0013-stripe-reserialised-body",
+      "title": "The body re-serialised with a space: the bytes changed, so the signature cannot match",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{timestamp}.{body}",
+          "encoding": "hex",
+          "tolerance": 300
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": "1614265330",
+        "now": 1614265340,
+        "raw": "{ \"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "b540e1a5b5a47a3377021b8a104ad6cac0d4cb9c8a9f8c7d54514aa036cc5bce"
+        ],
+        "secret": "whsec_stripe_test"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0014-stripe-no-timestamp-with-a-window",
+      "title": "A scheme with a replay window and a delivery with no timestamp — refused",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{timestamp}.{body}",
+          "encoding": "hex",
+          "tolerance": 300
+        },
+        "id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
+        "timestamp": null,
+        "now": 1614265340,
+        "raw": "{\"type\":\"email.received\",\"data\":{\"email_id\":\"56761188-7520-42d8-8898-ff6fc54ce618\"}}",
+        "signatures": [
+          "b540e1a5b5a47a3377021b8a104ad6cac0d4cb9c8a9f8c7d54514aa036cc5bce"
+        ],
+        "secret": "whsec_stripe_test"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "delivery carried no timestamp header"
+      }
+    }
+  ]
+}
