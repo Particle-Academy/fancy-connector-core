@@ -1,0 +1,20 @@
+{
+  "method": "REQUEST",
+  "uid": "0005@example.test",
+  "sequence": 0,
+  "summary": "All-hands",
+  "description": "Join Zoom Meeting\nhttps://zoom.us/j/91234567890?pwd=abcDEF123\n\nMeeting ID: 912 3456 7890\n\nDial +1 646-931-3860\nPasscode: 445566\n\nAlso by Google Meet: https://meet.google.com/abc-defg-hij\nOr Microsoft Teams: https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZTk0%40thread.v2/0",
+  "location": null,
+  "status": "CONFIRMED",
+  "dtstart": "2026-09-22T14:00:00.000Z",
+  "dtend": "2026-09-22T14:30:00.000Z",
+  "organizer": { "name": null, "email": "ada@example.test" },
+  "attendees": [],
+  "rrule": null,
+  "joinTargets": [
+    { "kind": "zoom", "url": "https://zoom.us/j/91234567890?pwd=abcDEF123", "meetingId": "91234567890", "passcode": "abcDEF123", "phone": null },
+    { "kind": "dial-in", "url": null, "meetingId": null, "passcode": "445566", "phone": "+1 646-931-3860" },
+    { "kind": "google-meet", "url": "https://meet.google.com/abc-defg-hij", "meetingId": null, "passcode": null, "phone": null },
+    { "kind": "teams", "url": "https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZTk0%40thread.v2/0", "meetingId": null, "passcode": null, "phone": null }
+  ]
+}

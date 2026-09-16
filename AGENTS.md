@@ -313,6 +313,48 @@ loses its angle brackets while `messageId` keeps them. Latin-1 is decoded as
 ISO-8859-1 in both runtimes — the WHATWG `TextDecoder` would silently give
 windows-1252 for that label, which PHP's mbstring does not.
 
+**A pure RFC 5545 invite parser lives here too, for MOIC's meeting bot**
+(`src/ical.ts` / `Ical.php`), written from scratch — no third-party ical
+library — and held to `fixtures/ical/`, the same authored-corpus discipline
+as MIME. `parseInvite` reads METHOD, UID, SEQUENCE, SUMMARY/DESCRIPTION/
+LOCATION, STATUS, ORGANIZER, every ATTENDEE, and an RRULE when the event
+recurs; `DTSTART`/`DTEND` always come back as UTC instants — a `TZID`
+resolves through the calendar's own `VTIMEZONE` (its DAYLIGHT/STANDARD
+sub-components' yearly BYMONTH+BYDAY transition rules; an unknown TZID is
+refused BY NAME), and a value with neither a `Z` nor a `TZID` — RFC 5545's
+FLOATING time — is treated as UTC, named as a decision rather than left to
+look like an oversight, because resolving one correctly needs the READER's
+timezone, which nothing in the invite carries. `nextOccurrence` walks a
+narrow RRULE subset (`FREQ` daily/weekly/monthly/yearly with `INTERVAL`,
+`COUNT`, `UNTIL`, and `BYDAY` for WEEKLY only — a recurring invite using
+anything wider still parses; this is what does not attempt to walk it) to
+the next occurrence at or after a given instant, `null` once the series has
+nothing left to offer. `joinTargets` is ALLOW-LISTED — Google Meet, Zoom
+(meeting id and passcode read out of the URL), Microsoft Teams, and a
+dial-in number with its own passcode line — and returns nothing for a shape
+it does not know, on purpose: a bot that guessed at an unrecognised link
+would try to join something it cannot handle.
+
+**A URL-shaped regex constant reads as a literal outbound URL to the
+discipline scanners, and the trap is which character follows the escaped
+slashes, not whether they are escaped.** Both scanners look for
+`https?:` followed immediately by the slash run and then a WORD character —
+TS's requires two *literal, unescaped* `/` characters adjacent (so a JS
+regex literal's own `\/\/ ` never matches, since a `\` always sits between
+them); PHP's is stricter and matches ANY run of backslash-or-slash
+characters, escaped or not, so it fires the moment a real hostname's first
+letter lands immediately after that run. `joinTargets`' Zoom pattern was
+never at risk — `[\w.-]*` follows the slashes, and `[` is not a word
+character — but the Meet and Teams patterns went straight into a literal
+hostname and both tripped PHP's scanner although the byte-identical TS
+patterns passed clean. The fix already lived in this file: `Text.php`'s own
+URL-detection regex writes `\S` immediately after the escaped slashes
+specifically so a backslash, never a hostname, follows them. `Ical.php`
+wraps each literal hostname in a `(?:…)` it does not otherwise need — `(` is
+not a word character either — for the same reason. Read the scanner's own
+comment before writing a NEW url-shaped pattern in either language; the two
+scanners disagree about what a URL looks like, and only PHP's needs this.
+
 ---
 
 ## The principle underneath three separate rules

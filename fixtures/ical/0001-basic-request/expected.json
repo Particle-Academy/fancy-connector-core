@@ -1,0 +1,16 @@
+{
+  "method": "REQUEST",
+  "uid": "0001@example.test",
+  "sequence": 0,
+  "summary": "Design review",
+  "description": null,
+  "location": null,
+  "status": "CONFIRMED",
+  "dtstart": "2026-09-22T14:00:00.000Z",
+  "dtend": "2026-09-22T14:30:00.000Z",
+  "organizer": { "name": "Ada Lovelace", "email": "ada@example.test" },
+  "attendees": [
+    { "name": "Grace Hopper", "email": "grace@example.test", "role": "REQ-PARTICIPANT", "partstat": "ACCEPTED" }
+  ],
+  "rrule": null
+}

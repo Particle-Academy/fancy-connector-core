@@ -1,0 +1,17 @@
+{
+  "$comment": "The SAME uid as 0001, a higher SEQUENCE, STATUS:CANCELLED -- a host matches this against the original REQUEST by uid and refuses to apply it if its own stored sequence is already >= 2.",
+  "method": "CANCEL",
+  "uid": "0001@example.test",
+  "sequence": 2,
+  "summary": "Design review",
+  "description": null,
+  "location": null,
+  "status": "CANCELLED",
+  "dtstart": "2026-09-22T14:00:00.000Z",
+  "dtend": "2026-09-22T14:30:00.000Z",
+  "organizer": { "name": "Ada Lovelace", "email": "ada@example.test" },
+  "attendees": [
+    { "name": "Grace Hopper", "email": "grace@example.test", "role": "REQ-PARTICIPANT", "partstat": "NEEDS-ACTION" }
+  ],
+  "rrule": null
+}

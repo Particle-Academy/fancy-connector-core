@@ -1,0 +1,16 @@
+{
+  "$comment": "Webex and a made-up generic link are NOT allow-listed. joinTargets must be empty -- a meeting bot that guessed at unknown link shapes would try to join something it cannot handle, or worse, a page that isn't a meeting at all.",
+  "method": "REQUEST",
+  "uid": "0006@example.test",
+  "sequence": 0,
+  "summary": "Vendor call",
+  "description": "Join our Webex meeting: https://acme.webex.com/acme/j.php?MTID=abc123def456\n\nOr call in at https://join.example.test/room/42",
+  "location": "https://acme.webex.com/acme/j.php?MTID=abc123def456",
+  "status": "CONFIRMED",
+  "dtstart": "2026-09-22T14:00:00.000Z",
+  "dtend": "2026-09-22T14:30:00.000Z",
+  "organizer": { "name": null, "email": "ada@example.test" },
+  "attendees": [],
+  "rrule": null,
+  "joinTargets": []
+}

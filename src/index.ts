@@ -34,6 +34,7 @@ export * from "./delivery";
 export * from "./drift";
 export * from "./errors";
 export * from "./faker";
+export * from "./ical";
 export * from "./idempotency";
 export * from "./lease";
 export * from "./metrics";

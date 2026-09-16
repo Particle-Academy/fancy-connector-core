@@ -6,6 +6,50 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.10.0] - 2026-09-16
+
+Tynn #12 (MOIC's meeting bot): an RFC 5545 invite parser, written from
+scratch in both runtimes (the owner: no third-party code) — no provider
+generates it; it lives beside the other pure helpers. Additive;
+`CONNECTOR_API_VERSION` stays at 1.
+
+### Added
+
+- **`parseInvite` / `Ical::parse`** — raw invite text to a structured
+  `Invite`: METHOD (REQUEST/CANCEL), UID, SEQUENCE, SUMMARY/DESCRIPTION/
+  LOCATION (RFC 5545-unescaped, folded lines joined first), STATUS,
+  ORGANIZER and every ATTENDEE (name, email, role, partstat), and an RRULE
+  when the event recurs. `DTSTART`/`DTEND` always come back as UTC
+  instants: a `Z` suffix passes through, a `TZID` resolves through the
+  calendar's own `VTIMEZONE` (its DAYLIGHT/STANDARD sub-components, each
+  with a yearly BYMONTH+BYDAY transition rule — an unknown TZID is refused
+  BY NAME, never guessed), and a value with neither (RFC 5545's FLOATING
+  time) is treated as UTC — a decision named rather than left to look like
+  an oversight, because resolving one correctly needs the READER's
+  timezone, which nothing in the invite carries.
+- **`nextOccurrence` / `Ical::nextOccurrence`** — the next occurrence at or
+  after a given instant, for a recurring or a one-off invite alike; `null`
+  once the series (or the single occurrence) has nothing left to offer.
+  RRULE support is intentionally narrow: `FREQ` daily/weekly/monthly/yearly
+  with `INTERVAL`, `COUNT` and `UNTIL`, and `BYDAY` for WEEKLY only — no
+  `BYMONTHDAY`, `BYSETPOS`, `BYWEEKNO`, `BYYEARDAY`, `WKST`, `EXDATE` or
+  `RDATE`. A recurring invite using one of those still parses (its RRULE
+  fields are read, never dropped); `nextOccurrence` is what does not
+  attempt to walk it.
+- **`joinTargets` / `Ical::joinTargets`** — the ALLOW-LISTED places a bot
+  can actually join, in the order they appear in the text: Google Meet,
+  Zoom (with the meeting id and passcode read out of the URL itself),
+  Microsoft Teams, and a dial-in phone number with its own passcode line.
+  Anything else — Webex, a generic link, an unrecognised dial-in shape —
+  is not returned: a shape this package does not know is a shape a bot
+  should not guess at.
+- **`fixtures/ical/`** — six authored cases (the floor, a VTIMEZONE
+  resolution, a weekly recurrence with four `nextOccurrence` boundary
+  queries, a CANCEL sharing its REQUEST's uid at a higher sequence, an
+  allow-listed join-target extraction from a folded/escaped DESCRIPTION,
+  and the negative case: a non-allow-listed link ignored). Both runtimes
+  read it; `README.md` names the decision each case pins.
+
 ## [0.9.0] - 2026-09-15
 
 The verification half of Tynn #11 (Resend inbound email, signed by Svix),

@@ -1,0 +1,20 @@
+{
+  "method": "REQUEST",
+  "uid": "0003@example.test",
+  "sequence": 0,
+  "summary": "Standup",
+  "description": null,
+  "location": null,
+  "status": "CONFIRMED",
+  "dtstart": "2026-09-07T09:00:00.000Z",
+  "dtend": "2026-09-07T09:30:00.000Z",
+  "organizer": { "name": null, "email": "ada@example.test" },
+  "attendees": [],
+  "rrule": { "freq": "WEEKLY", "interval": 1, "count": 6, "until": null, "byDay": ["MO", "WE"] },
+  "nextOccurrenceQueries": [
+    { "$comment": "Before the series starts: the first occurrence is DTSTART itself.", "after": "2026-09-01T00:00:00.000Z", "expect": "2026-09-07T09:00:00.000Z" },
+    { "$comment": "Between Wed 9/9 and Mon 9/14: the next BYDAY hit, not the next calendar week.", "after": "2026-09-10T00:00:00.000Z", "expect": "2026-09-14T09:00:00.000Z" },
+    { "$comment": "Exactly ON an occurrence: at-or-after is inclusive.", "after": "2026-09-16T09:00:00.000Z", "expect": "2026-09-16T09:00:00.000Z" },
+    { "$comment": "After the 6th (last) occurrence, Wed 9/23: COUNT is exhausted.", "after": "2026-09-24T00:00:00.000Z", "expect": null }
+  ]
+}

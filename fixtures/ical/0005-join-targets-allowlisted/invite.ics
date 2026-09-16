@@ -1,0 +1,20 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Acme//Scheduling//EN
+METHOD:REQUEST
+BEGIN:VEVENT
+UID:0005@example.test
+SEQUENCE:0
+DTSTAMP:20260901T120000Z
+DTSTART:20260922T140000Z
+DTEND:20260922T143000Z
+SUMMARY:All-hands
+STATUS:CONFIRMED
+ORGANIZER:mailto:ada@example.test
+DESCRIPTION:Join Zoom Meeting\nhttps://zoom.us/j/91234567890?pwd=abcDEF12
+ 3\n\nMeeting ID: 912 3456 7890\n\nDial +1 646-931-3860\nPasscode: 445566\n
+ \nAlso by Google Meet: https://meet.google.com/abc-defg-hij\nOr Microsof
+ t Teams: https://teams.microsoft.com/l/meetup-join/19%3ameeting_ZTk0%40t
+ hread.v2/0
+END:VEVENT
+END:VCALENDAR

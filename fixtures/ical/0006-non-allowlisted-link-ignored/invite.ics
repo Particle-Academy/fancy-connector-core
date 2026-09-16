@@ -1,0 +1,18 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Acme//Scheduling//EN
+METHOD:REQUEST
+BEGIN:VEVENT
+UID:0006@example.test
+SEQUENCE:0
+DTSTAMP:20260901T120000Z
+DTSTART:20260922T140000Z
+DTEND:20260922T143000Z
+SUMMARY:Vendor call
+STATUS:CONFIRMED
+ORGANIZER:mailto:ada@example.test
+DESCRIPTION:Join our Webex meeting: https://acme.webex.com/acme/j.php?MTI
+ D=abc123def456\n\nOr call in at https://join.example.test/room/42
+LOCATION:https://acme.webex.com/acme/j.php?MTID=abc123def456
+END:VEVENT
+END:VCALENDAR
