@@ -69,6 +69,20 @@ jobs:
           php-version: "8.4"
           coverage: none
 
+      - name: Fetch the third-party allowlist
+        uses: actions/checkout@v4
+        with:
+          repository: Particle-Academy/.github
+          path: .third-party-allowlist
+          persist-credentials: false
+
+      - name: Third-party dependency allowlist
+        run: |
+          node .third-party-allowlist/third-party/check.mjs --repo .
+          node -e "require('node:fs').rmSync('.third-party-allowlist',{recursive:true,force:true})"
+
+      # Trusted Publishing (OIDC) — no token. npm pinned to 11.18.0: npm 12.0.0
+      # breaks --provenance ("Cannot find module 'sigstore'").
       - name: Install
         run: |
           npm install --no-audit --no-fund --legacy-peer-deps
@@ -85,19 +99,5 @@ jobs:
 
       # Release gate: third-party dependencies must be approved and still
       # maintained BEFORE the tarball reaches the registry.
-      - name: Fetch the third-party allowlist
-        uses: actions/checkout@v4
-        with:
-          repository: Particle-Academy/.github
-          path: .third-party-allowlist
-          persist-credentials: false
-
-      - name: Third-party dependency allowlist
-        run: |
-          node .third-party-allowlist/third-party/check.mjs --repo .
-          node -e "require('node:fs').rmSync('.third-party-allowlist',{recursive:true,force:true})"
-
-      # Trusted Publishing (OIDC) — no token. npm pinned to 11.18.0: npm 12.0.0
-      # breaks --provenance ("Cannot find module 'sigstore'").
       - name: Publish
         run: npx -y npm@11.18.0 publish --provenance --access public
