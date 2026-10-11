@@ -6,6 +6,26 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.10.1] - 2026-10-10
+
+### Fixed
+
+- **`linkRanges`'s trailing-punctuation trim was quadratic (CodeQL
+  `js/polynomial-redos`, HIGH).** `match[0].replace(/[.,;:!?)\]}'"]+$/, "")`
+  is unanchored at the start, so V8 retries the trailing run from every
+  position inside it — measured at 344ms/20k, 1.2s/40k, 5.2s/80k adversarial
+  characters, clean quadratic. `linkRanges(text)` runs on arbitrary
+  post/message text, not an operator-typed value, so this is reachable from
+  untrusted input, not just a slow edge case. Replaced with a backward scan
+  over a `Set` of trailing punctuation characters — linear by construction,
+  each step only decrements an index. Trim behaviour is unchanged and pinned
+  by a 9-case table before the mechanism changed; a growth-ratio test (4x the
+  input must cost well under 10x, not the ~18x the old code showed) guards
+  against this coming back. PHP's mirror (`Text.php`) uses the same
+  character class but was checked directly and does not exhibit the
+  blowup — PCRE is linear here, so only the TypeScript side changes. Found
+  and measured by Fancy; `CONNECTOR_API_VERSION` is unchanged.
+
 ## [0.10.0] - 2026-09-16
 
 Tynn #12 (MOIC's meeting bot): an RFC 5545 invite parser, written from

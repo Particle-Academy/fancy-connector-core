@@ -54,6 +54,71 @@ test("link ranges skip trailing punctuation and survive accents", () => {
   }
 });
 
+// Pinned BEFORE the ReDoS fix below changes the mechanism, not just after —
+// a trim that strips the wrong number of characters is a wrong URL, which is
+// worse than a slow one, and nothing here would notice that from the timing
+// test alone.
+test("trailing-punctuation trim, pinned exactly", () => {
+  const cases: Array<[string, string]> = [
+    ["https://example.test/a", "https://example.test/a"], // nothing trailing: unchanged
+    ["https://example.test/a.", "https://example.test/a"], // one trailing char
+    ["https://example.test/a!?)", "https://example.test/a"], // several different trailing chars
+    ["https://example.test/a.b!", "https://example.test/a.b"], // interior punctuation stays; only the tail trims
+    ['(https://example.test/a)', "https://example.test/a"], // the leading paren sits outside the match (matchAll starts at "https"); the trailing one is inside it and trims
+    ['"https://example.test/a"', "https://example.test/a"], // quote-wrapped
+    ["https://example.test/", "https://example.test/"], // trailing slash is not in the punctuation class
+    ["https://!!!", "https://"], // the whole tail is punctuation-class: trims down to the bare scheme
+    ["https://example.test/a']);,", "https://example.test/a"], // a realistic trailing run mixing five different chars
+  ];
+
+  for (const [input, expectedUrl] of cases) {
+    const [found] = linkRanges(input);
+
+    assert.equal(found?.url, expectedUrl, `trim of ${JSON.stringify(input)}`);
+  }
+});
+
+// CodeQL js/polynomial-redos, HIGH, found by Fancy 2026-10-09: the old
+// `.replace(/[.,;:!?)\]}'"]+$/, "")` is unanchored at the START, so V8's
+// backtracking engine retries the trailing run from every position inside it.
+// `linkRanges(text)` runs on arbitrary post/message text a connector
+// linkifies — not a config value an operator typed — so the hostile input is
+// the thing being processed, not something gated earlier. PHP's PCRE was
+// checked too (the mirrored trim in php/src/Text.php) and does NOT exhibit
+// this: verified directly, linear from 20k to 160k characters of alternating
+// punctuation. This is a V8-only engine characteristic, not a cross-runtime
+// bug, so only the TS side changes.
+//
+// A ReDoS fix has no output to assert, so this asserts TIME — both an
+// absolute ceiling and the GROWTH RATIO, which is the property that actually
+// distinguishes linear from quadratic. Doubling the input should roughly
+// double the cost, not quadruple it.
+test("the trailing-punctuation trim is linear, not quadratic, in adversarial input", () => {
+  const adversarial = (n: number) => `https://a.test/${"!".repeat(n)}x`;
+
+  const timeOf = (n: number) => {
+    const text = adversarial(n);
+    const start = performance.now();
+    linkRanges(text);
+    return performance.now() - start;
+  };
+
+  // Warm up the JIT before measuring, so the first case is not penalised for
+  // compiling.
+  timeOf(1_000);
+
+  const small = timeOf(20_000);
+  const large = timeOf(80_000); // 4x the input
+
+  assert.ok(small < 50, `20k adversarial chars took ${small}ms — already too slow to be linear`);
+  assert.ok(large < 200, `80k adversarial chars took ${large}ms — the old code took seconds here`);
+
+  // 4x the input should cost roughly 4x, generously bounded at 10x to absorb
+  // measurement noise. The vulnerable code costs ~16x (quadratic) here.
+  const ratio = large / Math.max(small, 1);
+  assert.ok(ratio < 10, `cost grew ${ratio.toFixed(1)}x for a 4x input — that is quadratic, not linear`);
+});
+
 test("render leaves short text alone and reports no problems", () => {
   const payload = render("short", { limit: 300, unit: "graphemes", thread: true, label: "Example" });
 
