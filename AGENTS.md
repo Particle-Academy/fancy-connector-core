@@ -512,6 +512,16 @@ tests.** The vendored copy is generated; nothing in CI compares it yet, because
 the check needs both repositories checked out at once — the sandbox side guards
 the half it can see, by failing when a generated file has lost its banner.
 
+**A CI job's NAME is load-bearing.** The `main protection` ruleset requires the
+checks `Third-party allowlist`, `node` and `php (8.4)`, each from the GitHub
+Actions app (id 15368). Rename one of those jobs or change the PHP matrix and
+the required context is never produced: every outside pull request then waits
+forever, while pushes to `main` bypass it and stay green, so nothing here would
+notice. Change the ruleset in the same breath. It required a phantom `build`
+until 2026-10-27, when Fancy found 39 of 96 estate repos in that state;
+`node .ai/tools/check-required-contexts.mjs` in fancy.agi reports any context
+that has gone unreachable.
+
 ## Adding a connector
 
 1. `connectors/<id>/connector.ts` — the `ProviderAdapter` + `Connector`.
