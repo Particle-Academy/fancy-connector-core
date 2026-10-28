@@ -6,6 +6,35 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.11.0] - 2026-10-28
+
+### Added
+
+- **`decodeFormFieldJson` / `FormFieldJson::decode`: the form-field-json
+  payload transform.** It reads a form-encoded body whose one named field
+  holds JSON, which is how Slack posts every interactivity callback
+  (`payload=<json>`). It runs AFTER signature verification, over the same raw
+  bytes. `+` and `%20` are both spaces. Every `%` must be `%XX` across the
+  WHOLE body, and the bytes must be UTF-8. A missing, doubled or malformed
+  field, or one that is not JSON, is refused BY NAME (`missing-field`,
+  `duplicate-field`, `bad-encoding`, `not-json`; `FormFieldJsonError.reason` /
+  `FormFieldJsonException->reason`). Neither runtime uses its built-in
+  decoder, because `decodeURIComponent` throws on `%zz` where `urldecode`
+  silently keeps it, and a field sent twice is refused rather than resolved
+  first-wins or last-wins. Both runtimes reproduce the hand-authored corpus
+  under `fixtures/form-field-json/`. In PHP, JSON objects come back as
+  arrays, so an empty `{}` is `[]`, as in `Mime::toArray()`.
+- **`TriggerDescriptor.decode` + `decodeDelivery` / `DeliveryDecode::apply`.**
+  A webhook trigger may declare how its verified body is read:
+  `{kind: "form-field-json", field: "payload"}`. A host verifies the raw
+  bytes, then calls the dispatcher with the declaration, then starts the run.
+  An unknown kind is refused by name, never passed through as raw bytes. The
+  kinds ship as data (`DELIVERY_DECODE_KINDS` / `DeliveryDecode::KINDS`).
+  Absent `decode` means a host reads the body as it always has.
+
+`CONNECTOR_API_VERSION` is unchanged: an optional descriptor field changes
+nothing a connector must implement.
+
 ## [0.10.1] - 2026-10-10
 
 ### Fixed
