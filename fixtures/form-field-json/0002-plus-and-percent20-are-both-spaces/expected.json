@@ -1,0 +1,8 @@
+{
+  "field": "payload",
+  "value": {
+    "note": "a b",
+    "other": "c d",
+    "accent": "café ☕"
+  }
+}

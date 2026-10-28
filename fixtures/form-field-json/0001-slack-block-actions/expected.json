@@ -1,0 +1,39 @@
+{
+  "field": "payload",
+  "value": {
+    "type": "block_actions",
+    "user": {
+      "id": "U2CERLKJA",
+      "username": "roadrunner",
+      "team_id": "T1DC2JH3J"
+    },
+    "team": {
+      "id": "T1DC2JH3J",
+      "domain": "testteamnow"
+    },
+    "enterprise": null,
+    "channel": {
+      "id": "C0123ABCD",
+      "name": "support"
+    },
+    "message": {
+      "type": "message",
+      "ts": "1730070000.000100",
+      "text": "Ticket #42: Printer on fire"
+    },
+    "trigger_id": "398738663015.47445629121.803a0bc887a14d10d2c447fce8b6703c",
+    "response_url": "https://hooks.slack.com/actions/T1DC2JH3J/397700885554/96rGlfmibIGlgcZRskXaIFfN",
+    "actions": [
+      {
+        "action_id": "ticket_assign_me",
+        "block_id": "ticket_42",
+        "type": "button",
+        "value": "42",
+        "action_ts": "1730070012.345678"
+      }
+    ],
+    "state": {
+      "values": {}
+    }
+  }
+}
