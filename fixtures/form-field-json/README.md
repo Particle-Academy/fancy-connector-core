@@ -35,3 +35,7 @@ and "this could not be read" need opposite actions.
 | `0005-field-that-is-not-json-is-refused` | A field that is not JSON is `not-json`, never the raw string. |
 | `0006-duplicate-field-is-refused` | The field twice is `duplicate-field`. "First wins" and "last wins" are both conventions, and two runtimes picking different ones would route the same click two ways. |
 | `0007-malformed-percent-is-refused` | `%zz` is `bad-encoding`. JavaScript's decoder throws on it while PHP's `urldecode` quietly keeps it, which is exactly where two runtimes diverge unless told. |
+
+Things every case relies on: the WHOLE body is decoded strictly, not only the
+named field. A malformed `%` in any field is `bad-encoding`, because a body
+that is only partly readable has not been read.

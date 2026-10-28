@@ -313,6 +313,15 @@ loses its angle brackets while `messageId` keeps them. Latin-1 is decoded as
 ISO-8859-1 in both runtimes — the WHATWG `TextDecoder` would silently give
 windows-1252 for that label, which PHP's mbstring does not.
 
+**The second transform is form-field-json** (`src/form-field-json.ts` /
+`FormFieldJson.php`): a form-encoded body whose one named field holds JSON,
+for Slack's interactivity callbacks (`payload=<json>`). It runs AFTER
+verification, over the same bytes, and is held to `fixtures/form-field-json/`
+the same way. It refuses BY NAME (`missing-field`, `duplicate-field`,
+`bad-encoding`, `not-json`), and neither runtime uses its built-in decoder:
+`decodeURIComponent` throws on `%zz` while `urldecode` keeps it, and a field
+sent twice is refused rather than resolved first-wins or last-wins.
+
 **A pure RFC 5545 invite parser lives here too, for MOIC's meeting bot**
 (`src/ical.ts` / `Ical.php`), written from scratch — no third-party ical
 library — and held to `fixtures/ical/`, the same authored-corpus discipline
