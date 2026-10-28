@@ -16,6 +16,7 @@
 import type { ResolvedConnection } from "./connection";
 import type { ConnectorFaker } from "./faker";
 import { fakeRequest } from "./faker";
+import type { DeliveryDecode } from "./form-field-json";
 import type { LeaseDeclaration } from "./lease";
 import type { ChallengeHandshake, HmacScheme, SharedTokenScheme, WebhookVerification } from "./webhook";
 import { header, isSharedTokenScheme, verifyHmac, verifySharedToken } from "./webhook";
@@ -56,6 +57,13 @@ export type TriggerDescriptor = {
   lease?: LeaseDeclaration;
   /** For `webhook` / `subscription`: how a delivery is authenticated. */
   verification?: WebhookVerificationSpec;
+  /**
+   * For `webhook`: how the VERIFIED body is read when it is not plain JSON —
+   * Slack's interactivity is `payload=<json>`. Absent means the host reads the
+   * body as it always has. Present means the host calls `decodeDelivery` with
+   * it, over the same raw bytes the signature was checked against.
+   */
+  decode?: DeliveryDecode;
   /** For `poll`: the provider's smallest sane interval, in seconds. */
   minPollSeconds?: number;
   /** A faked sample event, so the node is runnable before any of the above. */

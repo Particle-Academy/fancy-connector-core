@@ -95,6 +95,23 @@ function component(encoded: string, field: string): string {
   }
 }
 
+/**
+ * How a verified delivery is read, when its body is not plain JSON. Declared
+ * on the trigger (`TriggerDescriptor.decode`); a host verifies the raw bytes,
+ * then calls `decodeDelivery` with the declaration, then starts the run.
+ * Shipped as data too, for a host mirroring the union across a JSON boundary.
+ */
+export const DELIVERY_DECODE_KINDS = ["form-field-json"] as const;
+export type DeliveryDecode = { kind: (typeof DELIVERY_DECODE_KINDS)[number]; field: string };
+
+export function decodeDelivery(decode: DeliveryDecode, raw: Uint8Array | string): unknown {
+  if (decode.kind === "form-field-json") return decodeFormFieldJson(raw, decode.field);
+
+  // Refused rather than passed through: a kind nothing implements would
+  // otherwise publish the raw bytes as if they were the payload.
+  throw new Error(`unknown decode kind ${JSON.stringify((decode as { kind: unknown }).kind)}`);
+}
+
 function latin1(bytes: Uint8Array): string {
   let out = "";
   for (const byte of bytes) out += String.fromCharCode(byte);
