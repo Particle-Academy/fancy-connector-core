@@ -18,6 +18,8 @@ import type { ConnectorFaker } from "./faker";
 import { fakeRequest } from "./faker";
 import type { DeliveryDecode } from "./form-field-json";
 import type { LeaseDeclaration } from "./lease";
+import type { OidcExpectation, OidcJwtScheme } from "./oidc-delivery";
+import { isOidcJwtScheme, verifyOidcDelivery } from "./oidc-delivery";
 import type { ChallengeHandshake, HmacScheme, SharedTokenScheme, WebhookVerification } from "./webhook";
 import { header, isSharedTokenScheme, verifyHmac, verifySharedToken } from "./webhook";
 
@@ -117,10 +119,23 @@ export type SharedTokenVerificationSpec = {
   handshake?: ChallengeHandshake;
 };
 
-export type WebhookVerificationSpec = HmacVerificationSpec | SharedTokenVerificationSpec;
+/**
+ * The provider sends a BEARER TOKEN it signed (Google Cloud Pub/Sub push). The
+ * keys, audience and principal it is checked against are the HOST's, passed
+ * to `verifyDelivery` as an `OidcExpectation`. See `verifyOidcDelivery`.
+ */
+export type OidcJwtVerificationSpec = {
+  scheme: OidcJwtScheme;
+};
+
+export type WebhookVerificationSpec = HmacVerificationSpec | SharedTokenVerificationSpec | OidcJwtVerificationSpec;
+
+export function isOidcJwtSpec(spec: WebhookVerificationSpec): spec is OidcJwtVerificationSpec {
+  return isOidcJwtScheme(spec.scheme);
+}
 
 export function isSharedTokenSpec(spec: WebhookVerificationSpec): spec is SharedTokenVerificationSpec {
-  return isSharedTokenScheme(spec.scheme);
+  return isSharedTokenScheme(spec.scheme as HmacScheme | SharedTokenScheme);
 }
 
 export type InboundDelivery = {
@@ -149,6 +164,8 @@ export async function verifyDelivery(
   delivery: InboundDelivery,
   secret: string | undefined,
   now?: number,
+  /** For an `oidc-jwt` scheme: the keys, audience and principal the host configured. `secret` is not read. */
+  oidc?: OidcExpectation,
 ): Promise<WebhookVerification> {
   const spec = trigger.verification;
 
@@ -161,6 +178,15 @@ export async function verifyDelivery(
 
   if (isSharedTokenSpec(spec)) {
     return verifySharedToken({ raw: delivery.raw, headers: delivery.headers, secret, scheme: spec.scheme });
+  }
+
+  if (isOidcJwtSpec(spec)) {
+    return verifyOidcDelivery({
+      headers: delivery.headers,
+      scheme: spec.scheme,
+      expected: oidc,
+      ...(now === undefined ? {} : { now }),
+    });
   }
 
   // Dispatch on a NAMED kind, and refuse a name nobody serves. "Has no kind"

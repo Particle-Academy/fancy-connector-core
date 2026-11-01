@@ -5,6 +5,8 @@ declare(strict_types=1);
 use ParticleAcademy\Connectors\DeliveryDecode;
 use ParticleAcademy\Connectors\FormFieldJson;
 use ParticleAcademy\Connectors\FormFieldJsonException;
+use ParticleAcademy\Connectors\PubSubPush;
+use ParticleAcademy\Connectors\PubSubPushException;
 
 /**
  * The dispatcher a host calls after verifying a delivery. Mirrors
@@ -16,6 +18,18 @@ it('decodes form-field-json exactly as the transform does', function () use ($ra
     $decode = ['kind' => 'form-field-json', 'field' => 'payload'];
     expect(DeliveryDecode::apply($decode, $raw))->toBe(FormFieldJson::decode($raw, 'payload'));
     expect(DeliveryDecode::apply($decode, $raw))->toBe(['type' => 'block_actions']);
+});
+
+it('decodes pubsub-push exactly as the transform does', function () {
+    $push = json_encode(['message' => ['data' => base64_encode('{"historyId":1}'), 'messageId' => '1'], 'subscription' => 'projects/p/subscriptions/s']);
+    expect(DeliveryDecode::apply(['kind' => 'pubsub-push'], $push))->toBe(PubSubPush::decode($push));
+    expect(DeliveryDecode::apply(['kind' => 'pubsub-push'], $push)['data'])->toBe(['historyId' => 1]);
+    try {
+        DeliveryDecode::apply(['kind' => 'pubsub-push'], '{}');
+        $this->fail('expected a refusal');
+    } catch (PubSubPushException $e) {
+        expect($e->reason)->toBe('missing-message');
+    }
 });
 
 it('passes a refusal from the transform through by name', function () {
@@ -33,5 +47,5 @@ it('refuses an unknown kind by name, never passing raw bytes through', function 
 });
 
 it('ships the kinds as data', function () {
-    expect(DeliveryDecode::KINDS)->toBe(['form-field-json']);
+    expect(DeliveryDecode::KINDS)->toBe(['form-field-json', 'pubsub-push']);
 });

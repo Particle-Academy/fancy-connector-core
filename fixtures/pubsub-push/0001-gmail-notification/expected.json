@@ -1,0 +1,13 @@
+{
+  "value": {
+    "subscription": "projects/myproject/subscriptions/mysubscription",
+    "messageId": "2070443601311540",
+    "publishTime": "2021-02-26T19:13:55.749Z",
+    "attributes": {},
+    "deliveryAttempt": null,
+    "data": {
+      "emailAddress": "user@example.com",
+      "historyId": 9876543210
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "value": {
+    "subscription": "projects/p/subscriptions/s",
+    "messageId": "7",
+    "publishTime": null,
+    "attributes": {},
+    "deliveryAttempt": null,
+    "data": {
+      "emailAddress": "ü>?@example.com",
+      "historyId": 1
+    }
+  }
+}

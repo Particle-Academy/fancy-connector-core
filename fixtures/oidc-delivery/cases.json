@@ -1,0 +1,681 @@
+{
+  "suite": "oidc-delivery",
+  "title": "A push authenticated by an OIDC bearer token (Google Cloud Pub/Sub)",
+  "contract": {
+    "summary": "`verifyOidcDelivery` (TS) / `OidcDelivery::verify` (PHP): refuse when the host configured no keys, audience or principal; read `Bearer <token>` from the scheme's header (header name and auth scheme case-insensitive); verify the JWT with `verifyJwt` / `Jwt::verify` (RS256, kid, exp, nbf, the scheme's issuers, the configured audience, 60 s leeway); then require the scheme's principalClaim to EQUAL the configured principal and its verifiedClaim to be the literal true. Reasons are fixed strings; a JWT refusal passes through unchanged.",
+    "reference": "authored",
+    "referenceNote": "Claims follow Google's documented example (aud, azp, email, email_verified, exp, iat, iss, sub; tokens up to an hour old). Google publishes no verifiable token, so rows are signed by a throwaway 2048-bit key generated when this table was written; only its PUBLIC JWK is stored. 0012 is signed by a second throwaway key."
+  },
+  "cases": [
+    {
+      "id": "0001-google-push-valid",
+      "title": "A Google-shaped push token: issuer, audience, service account and email_verified all match",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3NjcyMjg2MDAsImlhdCI6MTc2NzIyNTAwMCwiaXNzIjoiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tIiwic3ViIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0In0.bgCMvjPe0jGBhi6XeNBQgfaMi9LTK_6IRqFDYpSYFYZXUkUWo0ZHYmx-SKiykwZpbitApCpj3l8t1z8Y1YnssrditE-j5MUPdYqAZa7WsQEWnJlfzPSkhwyLbLGCq6d1otj92hsp5_S5Y4Lrov3s04g7haxBjDZyGVd__PaypAszR7nOzfjjEhGzZAxobeABuugjHrR4upaWy4joU-zmznC0wwDFZ-FHtnwmwVqz4qyPfEbQjPsa8GjDO_48q6i3jsH2f_eGzuN4hMvq46HayqgLwIkSwdYk0VP0_XGRhyiSr0I6_xPaMD0dL7XcHBDfdflcKtV-xNcL2kCILVcjDw"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "0002-issuer-without-scheme",
+      "title": "iss \"accounts.google.com\", the second spelling Google documents: accepted",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3NjcyMjg2MDAsImlhdCI6MTc2NzIyNTAwMCwiaXNzIjoiYWNjb3VudHMuZ29vZ2xlLmNvbSIsInN1YiI6IjExMzc3NDI2NDQ2MzAzODMyMTk2NCJ9.Tp38BLL5QPEYv6Ywc1fgPbCphjKXcklgl3zUkGda_jH68sdyqvudu8K613Hr7uCU9980A6KqGlIhwiAdwno8FkAPiq1BJbEsAJ3mdDCnRiReRNXZ--rexA51LzbrHsDmq0FtP9AdlIcL601k7YBEQe_qv8Y_X3sVk6VoVBUf3PWWpcl9MBdfnbj8l6yZsqQBloZMZhO8l6dsNh7oZEiJpCoJCVSJBoifol1p9lDxiE2fV4au8BcvQVtGoebTwTkHDxte2Q8EapHT2hcExKPLrOkfv59psBVnR3gPl9LGeDnSr22Mid3QORzDSr6YwVC4-C0Se9SxUxGvCY2x0GW05w"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "0003-lowercase-header-and-scheme",
+      "title": "The header name and the auth scheme are case-insensitive (RFC 9110): accepted",
+      "input": {
+        "headers": {
+          "authorization": "bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3NjcyMjg2MDAsImlhdCI6MTc2NzIyNTAwMCwiaXNzIjoiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tIiwic3ViIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0In0.bgCMvjPe0jGBhi6XeNBQgfaMi9LTK_6IRqFDYpSYFYZXUkUWo0ZHYmx-SKiykwZpbitApCpj3l8t1z8Y1YnssrditE-j5MUPdYqAZa7WsQEWnJlfzPSkhwyLbLGCq6d1otj92hsp5_S5Y4Lrov3s04g7haxBjDZyGVd__PaypAszR7nOzfjjEhGzZAxobeABuugjHrR4upaWy4joU-zmznC0wwDFZ-FHtnwmwVqz4qyPfEbQjPsa8GjDO_48q6i3jsH2f_eGzuN4hMvq46HayqgLwIkSwdYk0VP0_XGRhyiSr0I6_xPaMD0dL7XcHBDfdflcKtV-xNcL2kCILVcjDw"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "0004-another-service-account",
+      "title": "Validly signed by Google, OUR audience, ANOTHER project's service account: refused. Anyone can point a push subscription at a public URL",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJhdHRhY2tlckBldmlsLXByb2plY3QuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZXhwIjoxNzY3MjI4NjAwLCJpYXQiOjE3NjcyMjUwMDAsImlzcyI6Imh0dHBzOi8vYWNjb3VudHMuZ29vZ2xlLmNvbSIsInN1YiI6IjExMzc3NDI2NDQ2MzAzODMyMTk2NCJ9.JHupd2KIqHYfmVsrlBpXmqrziiUjrZ6z9KOHpr-hoJXq9mRUe88pivkEj6YX-rvBQ-4fS6SueAqnc2AXQGfEmYTfi2X7ZOFj0222DkFtUWEkg7V6HcqlmF9Uq6jXYPYdPUM6W4VxmNktV_HFzlgNhfOEhsJRuqYEcN_q8loMqe6awSoLKEN6anI0V3mvBhb6jabNMJwOOkZCAfi-OfZxP9Pu_4tImYjX9uVql8Q66LKlSPa7OxD4Ttn_sxb1GZd28Gj3CuwxyXs-68maXrWYfmdoxP_dgxFWVBCgOAAn_FRcK9yzDg8NkqaUlaouTq4YD34cudLrDUezg5MY2BxLTQ"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token principal is not accepted"
+      }
+    },
+    {
+      "id": "0005-email-not-verified",
+      "title": "email_verified false: refused",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwiZXhwIjoxNzY3MjI4NjAwLCJpYXQiOjE3NjcyMjUwMDAsImlzcyI6Imh0dHBzOi8vYWNjb3VudHMuZ29vZ2xlLmNvbSIsInN1YiI6IjExMzc3NDI2NDQ2MzAzODMyMTk2NCJ9.UfZxepq4c8mfSahZ12LgU5m29WVQmHL8X-077Ty1vpfFV8ysyujrCfK1CkP0sW1M7ItnYb9qFL66thyl35i6tzgSUMqE3Zn0G_rJJZOjdmYL8WXzMhEqqKpgZL4BiFD8C3RqPdofwv6fgnvbmKm_LRdqDg7Hz7KRa-HxFJawsDKO-PSOhqNzkv2kx5IALwI9Od-EfRn3OFL3xCOv9qWzzN4IwDZvNvfTrveyIkzHKLs5EY1GlPgkiYm0B3uyLNOhMFWEvMQ19ubXYfLyxB-7PiyD50mSFe7iQaQl0HOzuKaCebDeiBuUqfWNFa5OZP76piPU9SIh9Ev-xQ8zqIpBHQ"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token principal is not verified"
+      }
+    },
+    {
+      "id": "0006-email-verified-absent",
+      "title": "No email_verified claim: refused, never read as verified",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImV4cCI6MTc2NzIyODYwMCwiaWF0IjoxNzY3MjI1MDAwLCJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJzdWIiOiIxMTM3NzQyNjQ0NjMwMzgzMjE5NjQifQ.WyhHGfuF1qteJTsjx4r6nFVCf9LIbckxwavkJW3dnd0oCVxem6_xFJMndrTjpTp7Jk2Va-bKqhPc2eqEEgvLtIh3nmfxpH80C_rXYekwW9hM3HHaGdouTJtLVhkRVCB6A9jgYVOQir9pc-yhQOp4sKbhu5be_wX87x6CNtSEDmu-CiK-LmVHzM6OSK9lw3gMLHl5RaiDRNeP9fk6Zx4Jp3HOwd-LTbXKaIU6AK2BQBaNDnoHaAn53Ko81TqBwtULXEuQapaAvQHxT51FSZjVm-RWOowEPGziOmNU5BiAmbKlEl4N5TNnNiyx4AsXuS9mXpfgCm3oXneBVc4_Ari4fg"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token principal is not verified"
+      }
+    },
+    {
+      "id": "0007-email-verified-string",
+      "title": "email_verified \"true\" as a STRING: refused; only the literal true counts",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjoidHJ1ZSIsImV4cCI6MTc2NzIyODYwMCwiaWF0IjoxNzY3MjI1MDAwLCJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJzdWIiOiIxMTM3NzQyNjQ0NjMwMzgzMjE5NjQifQ.Og-p_gKuFkhq1gVIW6k98suzXrjk9Lr3LdXLovG6qIPbRF73ovuH89LK52L71QzgZKk0FMMx63yQ1wJ8DyFH5Jjaq94DrU55ofDekHzC59jBHtnkmhq2LLdDpD_qPWW2_C4aZePwGoph3ChQLmyzxAhZQv_j1kIpYfkPshHduaM7KQ9WMremdQaV79wIll1MQlBP3MkhRT67XHNQFRyMEiMOox5nsDQv5NOQjrhOmFy4Y21QpDplPyml835FleXQdW4qBDGxm2z1SQXU2we_Jet9zBMkSFSDeRnYknYa3_Jl9ghnx9jwiG5V-yjswPR7VHZlly3OR_tgDFYM5nUKUg"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token principal is not verified"
+      }
+    },
+    {
+      "id": "0008-principal-claim-absent",
+      "title": "No email claim at all: refused",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWxfdmVyaWZpZWQiOnRydWUsImV4cCI6MTc2NzIyODYwMCwiaWF0IjoxNzY3MjI1MDAwLCJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJzdWIiOiIxMTM3NzQyNjQ0NjMwMzgzMjE5NjQifQ.LFpjZRdzT0_IyA_4Z_PL6vdN5Ug_0rNOijSFZRh6PsXomGMO5qTBcLZqftO6lP9X2kB3sSb0jWlp_5KKw8rGH03bGcFH4CNrXGtIRtDlOduLuu2hMV61XiKHXCpF06ipTDDpoIqyGHLbk5IFx5nMtaS8XJs0_TK43ms6Q8onD0UK25dcuzTJNZwBwozR_kKNsg3baZZm0jhCFTNuHS4AGdis7EG3B2iCD-Ahhc_1amEfpp-3bv8XADYsaIBiUzKqZ3laJI4bBeb1XYLtidREIk8GR3buIFpxrgOZRGQfqdK8UDt4j_fuJUYZ9wix5rby3LNLVhOmXshquebfMqBOFQ"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token principal is not accepted"
+      }
+    },
+    {
+      "id": "0009-audience-mismatch",
+      "title": "A token minted for another endpoint: refused",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2Vsc2V3aGVyZS5leGFtcGxlLnRlc3QvcHVzaCIsImF6cCI6IjExMzc3NDI2NDQ2MzAzODMyMTk2NCIsImVtYWlsIjoiZ21haWwtcHVzaEBtb2ljLWV4YW1wbGUuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZXhwIjoxNzY3MjI4NjAwLCJpYXQiOjE3NjcyMjUwMDAsImlzcyI6Imh0dHBzOi8vYWNjb3VudHMuZ29vZ2xlLmNvbSIsInN1YiI6IjExMzc3NDI2NDQ2MzAzODMyMTk2NCJ9.VBGDL2En2_fvbp7pKKe8sS-f_2x7M9elvT1ahFzn4AIuFrcwvBt_yhH3Ef1PGjfUaFEcNcK0q7cbr0mPaOsfYUPsTK4Mp9SQxBh_s1AdBrcXBY3dKta-aV6O2Hn2tyColKpzxhKCdt_z_a8Z8ucV3Ld_TUm0clGS4hZNm0PB8wyoXhH2ZkLDkCltGcvNMyty5mSYNT5yz3j_9cL289n0RPPf45m_NaoKNvy6jIYtDwEQkF1FyVin83TVchdS2clUHU5QXDI-aFWeTMyUPBiDIeudzrTPedLNqYfKdYghwtsDx1HlAW6tsA4b5YDLky6Z0zr07w4jW1VGIWG8nrYLcA"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token audience is not accepted"
+      }
+    },
+    {
+      "id": "0010-issuer-mismatch",
+      "title": "An issuer that is not Google: refused",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3NjcyMjg2MDAsImlhdCI6MTc2NzIyNTAwMCwiaXNzIjoiaHR0cHM6Ly9ldmlsLmV4YW1wbGUudGVzdCIsInN1YiI6IjExMzc3NDI2NDQ2MzAzODMyMTk2NCJ9.aTxW7O7WjhN7tZteUlhdRnxlp5g4M6q7WU0R5SP3Hd6FITKgoI3eaAP4xEqtcDVwVHa368ZgssnUCoU-yXelgL9WDpNjDwBBV5fNTsHb2jClne2a9qnGNZaeofJv4PSuw5Gp4LH_ltvLQRw9Y9Fzp9uOegTZkRCZdCIeqnDHItykuM7IsRJ5TUx-VXmm6ob52AN3dCw0KBQGv6-8ls8pcoea0ZJRsAc0opMivGp5kvczoxSWb8U7tc5UzD6G3NXssdhIkU5Lw70vOJSNXWTgJYqK29ZtVIo4MJXZlgPX7aps3WKZLM51Qh4gGYcOXRJrigfz_gOOkzwMzOmRl6I4qg"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token issuer is not accepted"
+      }
+    },
+    {
+      "id": "0011-expired",
+      "title": "exp more than the 60 s leeway in the past: refused",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3NjcyMjUyMDAsImlhdCI6MTc2NzIyMTYwMCwiaXNzIjoiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tIiwic3ViIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0In0.va79c9jyEeTuwVACbh56JxFXmKAGy0-0ExC6FTetPj3u__I1kdW9UcqY3u5wmO9FEosgudWEDa1RAVyAwWh80fruPFsjTMP-T_0L0tSzpHZOR-EaDD4H3NJHQXfEQXsAA0zfkCMUqmPN_UNgitArDmeAYAJBIl7WowvJXf5ED6EUds7fn8GStMs97DeDfQDUG8QZ9lJhiZt67sD9zECk6RrcQMriUxASrui3BFvbhW3h4YiyQ93owP9NZSmzF2fji79Tx3Fa4spf7_liN4afYO7_roRX4jzuQ-tuZ3-tsMp07vIEIREO8HUmFSQi2Cg9VcXCsju_Ob65n3gSV9BCcQ"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token has expired"
+      }
+    },
+    {
+      "id": "0012-forged-signature",
+      "title": "Signed by another key under kid k1: refused",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3NjcyMjg2MDAsImlhdCI6MTc2NzIyNTAwMCwiaXNzIjoiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tIiwic3ViIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0In0.JdmUH-xZFM7CDZ7iFjVMM4ZNLEiKkwJ4SiOMGP2X_T9-Mr__c4SeDcJRDyk3EZbk79LLXXztxU4tMU_WNjmcTdWtmgm9tCCyWphVtBQ4TMqGMINHsHsOBmJ-cWT653RspvicxYMC2PR9QqXsinJ1ovMc_xg2XQ-jqZKybcgk6D-qclAAe_iaDXOEp8VHWaT_pZcwtJP7BbN9lcdY2FOGir3QoAG-hmPoseW-_DerlKd9XpMJ9hWhs4FP0qO0gJjYKvghSobEfbLSQ7fO3NHJ12l1F205xzRzKnrRFu69ZQQRRebJokevFfCCWlxeUoGy4z31dCC2f4ka4GG8vp0SxQ"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0013-alg-none",
+      "title": "alg none: refused by name",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJub25lIiwia2lkIjoiazEifQ.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3NjcyMjg2MDAsImlhdCI6MTc2NzIyNTAwMCwiaXNzIjoiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tIiwic3ViIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0In0."
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "alg \"none\" is not accepted"
+      }
+    },
+    {
+      "id": "0014-no-authorization-header",
+      "title": "No Authorization header: refused",
+      "input": {
+        "headers": {},
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "delivery carried no bearer token"
+      }
+    },
+    {
+      "id": "0015-basic-scheme",
+      "title": "Authorization: Basic …: refused",
+      "input": {
+        "headers": {
+          "Authorization": "Basic dXNlcjpwYXNz"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "delivery carried no bearer token"
+      }
+    },
+    {
+      "id": "0016-bearer-empty",
+      "title": "\"Bearer \" with nothing after it: refused",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer "
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "delivery carried no bearer token"
+      }
+    },
+    {
+      "id": "0017-no-keys-configured",
+      "title": "The host supplied no keys: refused before the delivery is read",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3NjcyMjg2MDAsImlhdCI6MTc2NzIyNTAwMCwiaXNzIjoiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tIiwic3ViIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0In0.bgCMvjPe0jGBhi6XeNBQgfaMi9LTK_6IRqFDYpSYFYZXUkUWo0ZHYmx-SKiykwZpbitApCpj3l8t1z8Y1YnssrditE-j5MUPdYqAZa7WsQEWnJlfzPSkhwyLbLGCq6d1otj92hsp5_S5Y4Lrov3s04g7haxBjDZyGVd__PaypAszR7nOzfjjEhGzZAxobeABuugjHrR4upaWy4joU-zmznC0wwDFZ-FHtnwmwVqz4qyPfEbQjPsa8GjDO_48q6i3jsH2f_eGzuN4hMvq46HayqgLwIkSwdYk0VP0_XGRhyiSr0I6_xPaMD0dL7XcHBDfdflcKtV-xNcL2kCILVcjDw"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "no signing keys supplied for this trigger"
+      }
+    },
+    {
+      "id": "0018-no-audience-configured",
+      "title": "The host configured no audience: refused. An unchecked audience accepts every Google-signed token",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3NjcyMjg2MDAsImlhdCI6MTc2NzIyNTAwMCwiaXNzIjoiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tIiwic3ViIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0In0.bgCMvjPe0jGBhi6XeNBQgfaMi9LTK_6IRqFDYpSYFYZXUkUWo0ZHYmx-SKiykwZpbitApCpj3l8t1z8Y1YnssrditE-j5MUPdYqAZa7WsQEWnJlfzPSkhwyLbLGCq6d1otj92hsp5_S5Y4Lrov3s04g7haxBjDZyGVd__PaypAszR7nOzfjjEhGzZAxobeABuugjHrR4upaWy4joU-zmznC0wwDFZ-FHtnwmwVqz4qyPfEbQjPsa8GjDO_48q6i3jsH2f_eGzuN4hMvq46HayqgLwIkSwdYk0VP0_XGRhyiSr0I6_xPaMD0dL7XcHBDfdflcKtV-xNcL2kCILVcjDw"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": null,
+        "principal": "gmail-push@moic-example.iam.gserviceaccount.com",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "no audience configured for this trigger"
+      }
+    },
+    {
+      "id": "0019-no-principal-configured",
+      "title": "The host configured no service account: refused, for the same reason as 0004",
+      "input": {
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJhdWQiOiJodHRwczovL2hvb2tzLmV4YW1wbGUudGVzdC9nbWFpbC9wdXNoIiwiYXpwIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0IiwiZW1haWwiOiJnbWFpbC1wdXNoQG1vaWMtZXhhbXBsZS5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJleHAiOjE3NjcyMjg2MDAsImlhdCI6MTc2NzIyNTAwMCwiaXNzIjoiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tIiwic3ViIjoiMTEzNzc0MjY0NDYzMDM4MzIxOTY0In0.bgCMvjPe0jGBhi6XeNBQgfaMi9LTK_6IRqFDYpSYFYZXUkUWo0ZHYmx-SKiykwZpbitApCpj3l8t1z8Y1YnssrditE-j5MUPdYqAZa7WsQEWnJlfzPSkhwyLbLGCq6d1otj92hsp5_S5Y4Lrov3s04g7haxBjDZyGVd__PaypAszR7nOzfjjEhGzZAxobeABuugjHrR4upaWy4joU-zmznC0wwDFZ-FHtnwmwVqz4qyPfEbQjPsa8GjDO_48q6i3jsH2f_eGzuN4hMvq46HayqgLwIkSwdYk0VP0_XGRhyiSr0I6_xPaMD0dL7XcHBDfdflcKtV-xNcL2kCILVcjDw"
+        },
+        "scheme": {
+          "kind": "oidc-jwt",
+          "header": "Authorization",
+          "issuers": [
+            "https://accounts.google.com",
+            "accounts.google.com"
+          ],
+          "principalClaim": "email",
+          "verifiedClaim": "email_verified"
+        },
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "1MmlL9rIdxIAhiSog5P-iq6wewENLEO-1ssi4TOyCYqyEMpFtxafezvjkMD2yMBjD57axj7mNfKHJZCrP_Ska3X8PSGTVUG4b8MHWkvJ6DWqM6orTYUoSUG_gXceY8ctClodm4jNzWQCbaBocdr0gq5I7Sh3w6IXBrAbFAuzqLwrhK8CUd1A7deBfg2v1OlGx37PdYqwjvy-MxlPqgrdl_Ev-hcrmPGEYEO683jfZDDibZXmqQUqdUu58yvc82aHgah-MQDDZa58u_JtftIqH0YkQR9mVVXuCsaqqXcstZTQkMhS4Kk2vOqHgUKyNJTcSNgiOYjnV0nI6NiOqk_Gzw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail/push",
+        "principal": "",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "no principal configured for this trigger"
+      }
+    }
+  ]
+}

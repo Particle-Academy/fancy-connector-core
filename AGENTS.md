@@ -322,6 +322,28 @@ the same way. It refuses BY NAME (`missing-field`, `duplicate-field`,
 `decodeURIComponent` throws on `%zz` while `urldecode` keeps it, and a field
 sent twice is refused rather than resolved first-wins or last-wins.
 
+**Gmail's push is authenticated by a TOKEN, not a signature, and decoded
+by a third transform.** Pub/Sub POSTs `Authorization: Bearer <JWT>`, signed by
+Google, over a body that proves nothing. `verifyJwt` / `Jwt::verify` checks a
+JWS against keys the HOST fetched (RS256 only, `none` and `HS256` refused by
+name, a `kid` must name a supplied key, `exp` required, the audience required
+unless passed as null on purpose), held to `fixtures/jwt/` and led by RFC 7515
+A.2. The `oidc-jwt` scheme (`verifyOidcDelivery` / `OidcDelivery::verify`,
+reached through `verifyDelivery`'s fifth argument, an `OidcExpectation`) adds
+the two checks people skip. The AUDIENCE is required, because Google signs a
+token for every push subscription anyone creates. The PRINCIPAL is required
+too: a stranger's subscription in their own project, aimed at your URL with
+your URL as its audience, carries a token Google signed correctly, and only
+`email` (with `email_verified` the literal `true`) says it was yours.
+Unconfigured keys, audience or principal refuse every push before the
+delivery is read. `fixtures/oidc-delivery/` is authored: Google publishes the
+claims, not a verifiable token. Then `decode: {kind: "pubsub-push"}`
+(`decodePubSubPush` / `PubSubPush.php`) unwraps the envelope: `data` in either
+base64 alphabet, padded or not, parsed as JSON, refused BY NAME
+(`not-json`, `missing-message`, `missing-data`, `bad-encoding`,
+`data-not-json`), held to `fixtures/pubsub-push/`. PHP reads the SHAPE from an
+object decode, because an associative decode makes `{}` and `[]` the same.
+
 **A pure RFC 5545 invite parser lives here too, for MOIC's meeting bot**
 (`src/ical.ts` / `Ical.php`), written from scratch — no third-party ical
 library — and held to `fixtures/ical/`, the same authored-corpus discipline

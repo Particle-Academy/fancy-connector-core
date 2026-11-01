@@ -21,6 +21,8 @@
  * - A value that is not JSON is `not-json`, never the raw string.
  */
 
+import { decodePubSubPush } from "./pubsub-push";
+
 export const FORM_FIELD_JSON_REASONS = ["missing-field", "duplicate-field", "bad-encoding", "not-json"] as const;
 export type FormFieldJsonReason = (typeof FORM_FIELD_JSON_REASONS)[number];
 
@@ -101,11 +103,12 @@ function component(encoded: string, field: string): string {
  * then calls `decodeDelivery` with the declaration, then starts the run.
  * Shipped as data too, for a host mirroring the union across a JSON boundary.
  */
-export const DELIVERY_DECODE_KINDS = ["form-field-json"] as const;
-export type DeliveryDecode = { kind: (typeof DELIVERY_DECODE_KINDS)[number]; field: string };
+export const DELIVERY_DECODE_KINDS = ["form-field-json", "pubsub-push"] as const;
+export type DeliveryDecode = { kind: "form-field-json"; field: string } | { kind: "pubsub-push" };
 
 export function decodeDelivery(decode: DeliveryDecode, raw: Uint8Array | string): unknown {
   if (decode.kind === "form-field-json") return decodeFormFieldJson(raw, decode.field);
+  if (decode.kind === "pubsub-push") return decodePubSubPush(raw);
 
   // Refused rather than passed through: a kind nothing implements would
   // otherwise publish the raw bytes as if they were the payload.

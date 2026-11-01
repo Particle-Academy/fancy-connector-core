@@ -1,0 +1,1 @@
+{"subscription":"projects/p/subscriptions/s"}
