@@ -11,8 +11,9 @@ use ParticleAcademy\Connectors\WebhookVerifier;
 $table = json_decode((string) file_get_contents(__DIR__.'/../../fixtures/signed-delivery/cases.json'), true, 512, JSON_THROW_ON_ERROR);
 $cases = $table['cases'];
 
-it('reads a usable table: 14 cases, unique ids, both providers, both verdicts, a rotation row', function () use ($cases) {
-    expect($cases)->toHaveCount(14);
+it('reads a usable table: 18 cases, unique ids, three providers, both verdicts, a rotation row', function () use ($cases) {
+    expect($cases)->toHaveCount(18);
+    expect(array_filter($cases, fn ($c) => $c['input']['scheme']['signsRequestLine'] ?? false))->not->toBeEmpty();
     expect(count(array_unique(array_column($cases, 'id'))))->toBe(count($cases));
     expect(array_filter($cases, fn ($c) => ($c['input']['scheme']['secretEncoding'] ?? null) === 'base64'))->not->toBeEmpty();
     expect(array_filter($cases, fn ($c) => ! isset($c['input']['scheme']['secretEncoding'])))->not->toBeEmpty();
@@ -24,15 +25,17 @@ foreach ($cases as $case) {
         $in = $case['input'];
         $scheme = $in['scheme'];
         $template = $scheme['payload'];
-        $id = $in['id'];
+        $id = $in['id'] ?? '';
 
         $result = WebhookVerifier::verify(
             raw: $in['raw'],
             signature: $in['signatures'],
             secret: $in['secret'],
-            payload: static fn (string $raw, ?string $timestamp): string => str_replace(
-                ['{id}', '{timestamp}', '{body}'],
-                [$id, $timestamp ?? '', $raw],
+            // The CORE hands over the uri already normalised by the scheme's
+            // rule; the runner only substitutes.
+            payload: static fn (string $raw, ?string $timestamp, ?string $_id = null, ?array $line = null): string => str_replace(
+                ['{id}', '{timestamp}', '{method}', '{uri}', '{body}'],
+                [$id, $timestamp ?? '', $line['method'] ?? '', $line['uri'] ?? '', $raw],
                 $template,
             ),
             algorithm: strtolower(str_replace('-', '', $scheme['algorithm'])),
@@ -42,6 +45,11 @@ foreach ($cases as $case) {
             encoding: $scheme['encoding'] ?? 'hex',
             secretEncoding: $scheme['secretEncoding'] ?? 'utf8',
             secretPrefix: $scheme['secretPrefix'] ?? null,
+            timestampUnit: $scheme['timestampUnit'] ?? 's',
+            signsRequestLine: $scheme['signsRequestLine'] ?? false,
+            uri: $scheme['uri'] ?? null,
+            method: $in['method'] ?? null,
+            url: $in['url'] ?? null,
         );
 
         // The table's shape: no `reason` key on success, a fixed string on failure.

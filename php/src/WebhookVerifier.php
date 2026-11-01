@@ -53,6 +53,43 @@ final class WebhookVerifier
      *                                     absence is a refusal, never a guess
      * @return array{ok: bool, reason: ?string}
      */
+    /** The URI rules a provider's signature can follow. Closed: each is a decision. */
+    public const SIGNED_URI_RULES = ['hubspot-v3'];
+
+    private const HUBSPOT_V3_DECODE = [
+        '%3A' => ':', '%2F' => '/', '%3F' => '?', '%40' => '@', '%21' => '!', '%24' => '$',
+        '%27' => "'", '%28' => '(', '%29' => ')', '%2A' => '*', '%2C' => ',', '%3B' => ';',
+    ];
+
+    /**
+     * The URI a provider signs, from the URL the request arrived on. The twin of
+     * `normaliseSignedUri` in TS.
+     *
+     * `hubspot-v3`: only the QUERY portion is percent-decoded, and only for
+     * twelve escapes (case-insensitive); never its leading `?`; any `#fragment`
+     * dropped. Everything else, `%26` and `%3D` included, stays as sent.
+     */
+    public static function normaliseSignedUri(string $url, string $rule): string
+    {
+        if ($rule !== 'hubspot-v3') {
+            throw new \InvalidArgumentException('unknown signed-uri rule '.json_encode($rule));
+        }
+
+        $withoutFragment = explode('#', $url, 2)[0];
+        $q = strpos($withoutFragment, '?');
+        if ($q === false) {
+            return $withoutFragment;
+        }
+
+        $query = preg_replace_callback(
+            '/%[0-9A-Fa-f]{2}/',
+            static fn (array $m): string => self::HUBSPOT_V3_DECODE[strtoupper($m[0])] ?? $m[0],
+            substr($withoutFragment, $q + 1),
+        );
+
+        return substr($withoutFragment, 0, $q).'?'.$query;
+    }
+
     public static function verify(
         string $raw,
         string|array|null $signature,
@@ -66,6 +103,14 @@ final class WebhookVerifier
         string $secretEncoding = 'utf8',
         ?string $secretPrefix = null,
         ?string $id = null,
+        // HubSpot sends MILLISECONDS; the window stays in seconds.
+        string $timestampUnit = 's',
+        // HubSpot v3 signs method + uri + body + timestamp: a delivery passed
+        // without its method or URL is refused by name.
+        bool $signsRequestLine = false,
+        ?string $uri = null,
+        ?string $method = null,
+        ?string $url = null,
     ): array {
         if ($secret === null || $secret === '') {
             // Never "accept when unconfigured". An endpoint that verifies
@@ -103,7 +148,10 @@ final class WebhookVerifier
             if (! is_numeric($timestamp)) {
                 return self::fail('timestamp header is not a number');
             }
-            if (abs(($now ?? time()) - (int) $timestamp) > $tolerance) {
+            // Converted, never compared raw: a millisecond timestamp against a
+            // window in seconds refuses every delivery ever made.
+            $sent = $timestampUnit === 'ms' ? ((float) $timestamp) / 1000 : (float) $timestamp;
+            if (abs(($now ?? time()) - $sent) > $tolerance) {
                 return self::fail("delivery is outside the {$tolerance}s replay window");
             }
         }
@@ -111,7 +159,15 @@ final class WebhookVerifier
         // A payload that signs the delivery's ID (Svix) takes it as a third
         // argument; the two-argument payloads every earlier scheme wrote
         // ignore an extra argument, as PHP lets a user function do.
-        $computed = hash_hmac($algorithm, $payload($raw, $timestamp, $id), $key, $encoding === 'base64');
+        $line = null;
+        if ($signsRequestLine) {
+            if ($method === null || $method === '' || $url === null || $url === '') {
+                return self::fail('delivery carried no request method or url');
+            }
+            $line = ['method' => $method, 'uri' => $uri === null ? $url : self::normaliseSignedUri($url, $uri)];
+        }
+
+        $computed = hash_hmac($algorithm, $payload($raw, $timestamp, $id, $line), $key, $encoding === 'base64');
         $expected = $encoding === 'base64' ? base64_encode($computed) : $computed;
 
         // Each candidate is compared in constant time; which of them matched

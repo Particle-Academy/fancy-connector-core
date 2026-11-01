@@ -47,7 +47,7 @@ export type HmacScheme = {
    * `v0:${timestamp}:${body}`, GitHub signs the body alone, and Svix signs
    * `${id}.${timestamp}.${body}` where `id` is the delivery's own id header.
    */
-  payload: (raw: string, timestamp?: string, id?: string) => string;
+  payload: (raw: string, timestamp?: string, id?: string, request?: SignedRequestLine) => string;
   /** Seconds a delivery stays acceptable. */
   tolerance?: number;
   /** Encoding of the signature the provider sends. */
@@ -62,7 +62,52 @@ export type HmacScheme = {
   secretEncoding?: "utf8" | "base64";
   /** A prefix to strip before decoding (`whsec_`). Its absence is a refusal, never a guess. */
   secretPrefix?: string;
+  /**
+   * The unit the timestamp header is in. Seconds unless said otherwise:
+   * HubSpot sends MILLISECONDS, and comparing those with a window in seconds
+   * refuses every delivery ever made.
+   */
+  timestampUnit?: "s" | "ms";
+  /**
+   * The provider signs the REQUEST LINE too (HubSpot v3:
+   * method + uri + body + timestamp). A delivery the host passed without its
+   * method or URL is refused by name, never signed with a gap.
+   */
+  signsRequestLine?: boolean;
+  /** How the signed URI is spelled from the URL the request was sent to. */
+  uri?: SignedUriRule;
 };
+
+/** The URI rules a provider's signature can follow. Closed: each is a decision. */
+export const SIGNED_URI_RULES = ["hubspot-v3"] as const;
+export type SignedUriRule = (typeof SIGNED_URI_RULES)[number];
+
+/** The request line as signed: the method, and the URI after the scheme's rule. */
+export type SignedRequestLine = { method: string; uri: string };
+
+const HUBSPOT_V3_DECODE: Record<string, string> = {
+  "%3A": ":", "%2F": "/", "%3F": "?", "%40": "@", "%21": "!", "%24": "$",
+  "%27": "'", "%28": "(", "%29": ")", "%2A": "*", "%2C": ",", "%3B": ";",
+};
+
+/**
+ * The URI a provider signs, from the URL the request arrived on.
+ *
+ * `hubspot-v3`: only the QUERY portion is percent-decoded, and only for twelve
+ * escapes (case-insensitive); never its leading `?`; any `#fragment` dropped.
+ * Everything else, `%26` and `%3D` included, stays as sent.
+ */
+export function normaliseSignedUri(url: string, rule: SignedUriRule): string {
+  if (rule !== "hubspot-v3") throw new Error(`unknown signed-uri rule ${JSON.stringify(rule)}`);
+
+  const withoutFragment = url.split("#", 1)[0] ?? "";
+  const q = withoutFragment.indexOf("?");
+  if (q === -1) return withoutFragment;
+
+  const query = withoutFragment.slice(q + 1).replace(/%[0-9A-Fa-f]{2}/g, (e) => HUBSPOT_V3_DECODE[e.toUpperCase()] ?? e);
+
+  return `${withoutFragment.slice(0, q)}?${query}`;
+}
 
 /** The HMAC key a scheme's secret spells, or the reason it cannot be one. */
 export function secretKeyBytes(
@@ -117,6 +162,8 @@ export async function verifyHmac(options: {
   timestamp?: string;
   /** The delivery's id, when the scheme signs one (Svix's `svix-id`). */
   id?: string;
+  /** The request line as RECEIVED, when the scheme signs it (HubSpot v3). */
+  request?: { method: string; url: string };
   /** Seconds since the epoch. Injected so tests are not clock-dependent. */
   now?: number;
 }): Promise<WebhookVerification> {
@@ -140,7 +187,10 @@ export async function verifyHmac(options: {
     if (!Number.isFinite(sent)) return { ok: false, reason: "timestamp header is not a number" };
 
     const now = options.now ?? Math.floor(Date.now() / 1000);
-    if (Math.abs(now - sent) > scheme.tolerance) {
+    // The window is in SECONDS; a millisecond timestamp is converted, never
+    // compared raw (which would refuse every HubSpot delivery).
+    const sentSeconds = scheme.timestampUnit === "ms" ? sent / 1000 : sent;
+    if (Math.abs(now - sentSeconds) > scheme.tolerance) {
       return { ok: false, reason: `delivery is outside the ${scheme.tolerance}s replay window` };
     }
   }
@@ -151,7 +201,20 @@ export async function verifyHmac(options: {
   const key = secretKeyBytes(secret, scheme);
   if ("reason" in key) return { ok: false, reason: key.reason };
 
-  const expected = await hmac(secret, scheme.payload(raw, timestamp, id), scheme.algorithm, scheme.encoding ?? "hex", scheme);
+  let line: SignedRequestLine | undefined;
+  if (scheme.signsRequestLine) {
+    const { method, url } = options.request ?? {};
+    if (!method || !url) return { ok: false, reason: "delivery carried no request method or url" };
+    line = { method, uri: scheme.uri ? normaliseSignedUri(url, scheme.uri) : url };
+  }
+
+  const expected = await hmac(
+    secret,
+    scheme.payload(raw, timestamp, id, line),
+    scheme.algorithm,
+    scheme.encoding ?? "hex",
+    scheme,
+  );
 
   // Each candidate is compared in constant time; which of them matched is not
   // a secret, so stopping at the first match leaks nothing.

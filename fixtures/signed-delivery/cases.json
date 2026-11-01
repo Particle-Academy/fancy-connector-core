@@ -7,7 +7,7 @@
       "verifyHmac": "verifyHmac({raw, signature: string | string[], secret, scheme, timestamp, now}) -> {ok: true} | {ok: false, reason}"
     },
     "reference": "authored",
-    "referenceNote": "Two providers, checked against their own pages on 2026-09-15. Svix (Resend): signed content `${svix-id}.${svix-timestamp}.${body}`, HMAC-SHA256, base64 signature, secret `whsec_<base64>` DECODED to key bytes, header `svix-signature` a space-separated list of `v1,<sig>` that 'could be any number of signatures' of which yours must match one. Stripe: `${t}.${body}`, hex, text key, and while a secret is rolled 'Stripe generates one signature for each secret' and says compare against EACH. Hence: ANY match accepts; a first-only rule fails a roll for 24 hours and reads like a wrong secret. The replay window is the implementer's choice (Svix says so); 300 s here. Reasons are fixed strings. A runner builds `payload` from the template with the row's `id` and `timestamp`, passes `signatures` as the list (an empty list is no signature), and returns the verification result verbatim.",
+    "referenceNote": "Two providers, checked against their own pages on 2026-09-15. Svix (Resend): signed content `${svix-id}.${svix-timestamp}.${body}`, HMAC-SHA256, base64 signature, secret `whsec_<base64>` DECODED to key bytes, header `svix-signature` a space-separated list of `v1,<sig>` that 'could be any number of signatures' of which yours must match one. Stripe: `${t}.${body}`, hex, text key, and while a secret is rolled 'Stripe generates one signature for each secret' and says compare against EACH. Hence: ANY match accepts; a first-only rule fails a roll for 24 hours and reads like a wrong secret. The replay window is the implementer's choice (Svix says so); 300 s here. Reasons are fixed strings. A runner builds `payload` from the template with the row's `id` and `timestamp`, passes `signatures` as the list (an empty list is no signature), and returns the verification result verbatim. HubSpot v3 (2026-11-01, developers.hubspot.com 'Validating requests'): signed content `${method}${uri}${body}${timestamp}`, HMAC-SHA256 under the app's client secret, base64, `X-HubSpot-Request-Timestamp` in MILLISECONDS with a 5-minute window, and the URI with only its QUERY portion percent-decoded for %3A %2F %3F %40 %21 %24 %27 %28 %29 %2A %2C %3B (never the leading ?, any #fragment dropped). 0015 is HubSpot's published worked example and reproduces from its inputs; 0017 is signed by that rule because no published example has a query. The runner passes the row's `method` and `url` as the request; the CORE normalises the uri, and the template only substitutes {method} {uri} {body} {timestamp}.",
     "implementations": [
       {
         "language": "node",
@@ -370,6 +370,114 @@
       "expected": {
         "ok": false,
         "reason": "delivery carried no timestamp header"
+      }
+    },
+    {
+      "id": "0015-hubspot-v3-valid",
+      "title": "HubSpot v3: method+uri+body+timestamp, base64, a MILLISECOND timestamp — HubSpot's published example, accepted",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{method}{uri}{body}{timestamp}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "timestampUnit": "ms",
+          "signsRequestLine": true,
+          "uri": "hubspot-v3"
+        },
+        "method": "POST",
+        "url": "https://webhook.site/335453f5-94b3-49d9-b684-a55354d4b8df",
+        "timestamp": "1752613922216",
+        "now": 1752613952,
+        "raw": "[{\"eventId\":531833541,\"subscriptionId\":3923621,\"portalId\":48807704,\"appId\":16111050,\"occurredAt\":1752613920733,\"subscriptionType\":\"contact.creation\",\"attemptNumber\":0,\"objectId\":138017612137,\"changeFlag\":\"CREATED\",\"changeSource\":\"CRM_UI\",\"sourceId\":\"userId:76023669\"}]",
+        "signatures": [
+          "gbj1XPRvUt0noT7i7fXfTzOD4sLzQmf0VT28ZYq0EYg="
+        ],
+        "secret": "cfc68c0b-4b4e-4ef8-b764-95350e4ea479"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "0016-hubspot-v3-outside-tolerance",
+      "title": "HubSpot v3: the same delivery 400 s later — the ms timestamp is compared in SECONDS of window, refused",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{method}{uri}{body}{timestamp}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "timestampUnit": "ms",
+          "signsRequestLine": true,
+          "uri": "hubspot-v3"
+        },
+        "method": "POST",
+        "url": "https://webhook.site/335453f5-94b3-49d9-b684-a55354d4b8df",
+        "timestamp": "1752613922216",
+        "now": 1752614322,
+        "raw": "[{\"eventId\":531833541,\"subscriptionId\":3923621,\"portalId\":48807704,\"appId\":16111050,\"occurredAt\":1752613920733,\"subscriptionType\":\"contact.creation\",\"attemptNumber\":0,\"objectId\":138017612137,\"changeFlag\":\"CREATED\",\"changeSource\":\"CRM_UI\",\"sourceId\":\"userId:76023669\"}]",
+        "signatures": [
+          "gbj1XPRvUt0noT7i7fXfTzOD4sLzQmf0VT28ZYq0EYg="
+        ],
+        "secret": "cfc68c0b-4b4e-4ef8-b764-95350e4ea479"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "delivery is outside the 300s replay window"
+      }
+    },
+    {
+      "id": "0017-hubspot-v3-query-decoded",
+      "title": "HubSpot v3: only the QUERY is percent-decoded (12 escapes; %3D and %26 kept), never its leading ?, and the #fragment dropped",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{method}{uri}{body}{timestamp}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "timestampUnit": "ms",
+          "signsRequestLine": true,
+          "uri": "hubspot-v3"
+        },
+        "method": "POST",
+        "url": "https://hooks.example.test/hubspot?portal=48807704&next=%2Fdeals%3Fx%3D1%26y%3D%40z&tag=%28a%2Cb%29#frag",
+        "timestamp": "1752613922216",
+        "now": 1752613952,
+        "raw": "[{\"eventId\":531833541,\"subscriptionId\":3923621,\"portalId\":48807704,\"appId\":16111050,\"occurredAt\":1752613920733,\"subscriptionType\":\"contact.creation\",\"attemptNumber\":0,\"objectId\":138017612137,\"changeFlag\":\"CREATED\",\"changeSource\":\"CRM_UI\",\"sourceId\":\"userId:76023669\"}]",
+        "signatures": [
+          "hDp1NtHQ6itGWRxCRRN0K7oF094gy0DdC8us8z7iqBU="
+        ],
+        "secret": "cfc68c0b-4b4e-4ef8-b764-95350e4ea479"
+      },
+      "expected": {
+        "ok": true
+      }
+    },
+    {
+      "id": "0018-hubspot-v3-no-request-line",
+      "title": "HubSpot v3: a delivery the host passed without its method or URL is refused by name, never signed with a gap",
+      "input": {
+        "scheme": {
+          "algorithm": "SHA-256",
+          "payload": "{method}{uri}{body}{timestamp}",
+          "encoding": "base64",
+          "tolerance": 300,
+          "timestampUnit": "ms",
+          "signsRequestLine": true,
+          "uri": "hubspot-v3"
+        },
+        "timestamp": "1752613922216",
+        "now": 1752613952,
+        "raw": "[{\"eventId\":531833541,\"subscriptionId\":3923621,\"portalId\":48807704,\"appId\":16111050,\"occurredAt\":1752613920733,\"subscriptionType\":\"contact.creation\",\"attemptNumber\":0,\"objectId\":138017612137,\"changeFlag\":\"CREATED\",\"changeSource\":\"CRM_UI\",\"sourceId\":\"userId:76023669\"}]",
+        "signatures": [
+          "gbj1XPRvUt0noT7i7fXfTzOD4sLzQmf0VT28ZYq0EYg="
+        ],
+        "secret": "cfc68c0b-4b4e-4ef8-b764-95350e4ea479"
+      },
+      "expected": {
+        "ok": false,
+        "reason": "delivery carried no request method or url"
       }
     }
   ]

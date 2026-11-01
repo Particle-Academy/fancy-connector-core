@@ -36,6 +36,9 @@ import { header, isSharedTokenScheme, verifyHmac, verifySharedToken } from "./we
  */
 export type DeliveryMechanism = "webhook" | "subscription" | "poll" | "pubsub" | "stream";
 
+/** See `TriggerDescriptor.route`. `path` is dotted; `[]` means every element. */
+export type DeliveryRoute = { by: string; path: string };
+
 export type TriggerDescriptor = {
   service: string;
   operation: string;
@@ -64,6 +67,15 @@ export type TriggerDescriptor = {
    * it, over the same raw bytes the signature was checked against.
    */
   decode?: DeliveryDecode;
+  /**
+   * For a delivery that reaches ONE endpoint on behalf of many tenants
+   * (HubSpot app webhooks, Gmail's Pub/Sub topic): the ONLY key a host may
+   * route by, and where it sits in the verified payload. The rule that goes
+   * with it is fixed, not configurable: route only AFTER verification, only
+   * to a connection or watch the host minted, and drop an unmapped key with a
+   * 2xx and a log line, creating nothing. The package declares; the HOST routes.
+   */
+  route?: DeliveryRoute;
   /** For `poll`: the provider's smallest sane interval, in seconds. */
   minPollSeconds?: number;
   /** A faked sample event, so the node is runnable before any of the above. */
@@ -115,6 +127,13 @@ export type InboundDelivery = {
   /** The body EXACTLY as received. Not re-serialised. See `webhook.ts`. */
   raw: string;
   headers: Record<string, string | string[] | undefined>;
+  /**
+   * The request line as RECEIVED, for a provider that signs it (HubSpot v3).
+   * Pass the full URL the provider called, scheme, host, path and query,
+   * exactly as it arrived.
+   */
+  method?: string;
+  url?: string;
 };
 
 /**
@@ -170,6 +189,9 @@ export async function verifyDelivery(
     scheme: spec.scheme,
     timestamp,
     id,
+    ...(delivery.method === undefined && delivery.url === undefined
+      ? {}
+      : { request: { method: delivery.method ?? "", url: delivery.url ?? "" } }),
     ...(now === undefined ? {} : { now }),
   });
 }
