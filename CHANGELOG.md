@@ -6,6 +6,38 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.12.0] - 2026-11-01
+
+### Added
+
+- **A signed REQUEST LINE and millisecond timestamps (HubSpot v3).** HubSpot
+  signs `base64(HMAC-SHA256(client secret, method + uri + body + timestamp))`,
+  sends `X-HubSpot-Request-Timestamp` in MILLISECONDS, and signs the URI with
+  only its QUERY portion percent-decoded for twelve escapes (never the leading
+  `?`, any `#fragment` dropped). The pieces:
+  - `InboundDelivery` gains optional `method` and `url`; pass the request
+    line exactly as it arrived.
+  - `HmacScheme` gains `timestampUnit` (`"s"` | `"ms"`), `signsRequestLine`
+    (a delivery without its method or URL is refused by name: `delivery
+    carried no request method or url`), and `uri: "hubspot-v3"`.
+  - The CORE normalises the URI (`normaliseSignedUri` /
+    `WebhookVerifier::normaliseSignedUri`; the rules ship as data, in
+    `SIGNED_URI_RULES`), and a scheme's `payload` receives the request line
+    as a fourth argument.
+  - PHP's new `verify()` parameters are appended, so existing calls are
+    unchanged.
+
+  The signed-delivery corpus gains four HubSpot rows, led by HubSpot's
+  PUBLISHED worked example, which reproduces from its inputs.
+- **`TriggerDescriptor.route` `{by, path}`.** It names the one key a delivery
+  that reaches ONE endpoint for many tenants may be routed by (HubSpot's
+  `portalId`; Gmail's `emailAddress`). The rule is fixed: route only after
+  verification, only to a connection or watch the host minted, and drop an
+  unmapped key with a 2xx and a log line, creating nothing. The package
+  declares; the host routes.
+
+`CONNECTOR_API_VERSION` is unchanged: everything here is optional.
+
 ## [0.11.0] - 2026-10-28
 
 ### Added
