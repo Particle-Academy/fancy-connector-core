@@ -6,6 +6,48 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.13.0] - 2026-11-01
+
+### Added
+
+- **`verifyJwt` / `Jwt::verify`: RS256 JWT verification against keys the
+  HOST supplies.** The core never fetches a key set. Every rule fails closed:
+  RS256 only, with `none` and `HS256` refused by name; a `kid` must name a
+  supplied key; `exp` is required and `nbf` honoured, both with 60 s of
+  leeway; the audience is REQUIRED unless the caller passes `null` on
+  purpose; the issuer is matched when given. Reasons are fixed strings. Both
+  runtimes read `fixtures/jwt/cases.json`, led by RFC 7515 Appendix A.2,
+  which verifies from the RFC's own inputs.
+- **The `oidc-jwt` verification scheme, for Google Cloud Pub/Sub push**
+  (Gmail's `users.watch` notifications). `verifyOidcDelivery` /
+  `OidcDelivery::verify`, reached through `verifyDelivery`'s new optional
+  fifth argument, an `OidcExpectation` (`keys`, `audience`, `principal`, all
+  the host's). It refuses every push when any of the three is unconfigured,
+  reads `Bearer <token>` case-insensitively, verifies the JWT, then requires
+  the scheme's `principalClaim` (`email`) to EQUAL the configured service
+  account and its `verifiedClaim` (`email_verified`) to be the literal
+  `true`. The principal check is what stops a stranger's push subscription,
+  aimed at your URL with your URL as its audience, whose token Google signs
+  correctly. `fixtures/oidc-delivery/cases.json` has 19 authored rows.
+- **The `pubsub-push` decode kind.** `decodePubSubPush` /
+  `PubSubPush::decode`, also through `decodeDelivery` /
+  `DeliveryDecode::apply`. It unwraps Pub/Sub's push envelope to
+  `{subscription, messageId, publishTime, attributes, deliveryAttempt, data}`.
+  `data` may be in either base64 alphabet, padded or not, and is parsed as
+  JSON. Malformed input is refused BY NAME: `not-json`, `missing-message`,
+  `missing-data`, `bad-encoding` or `data-not-json`. Held to the 13-case
+  corpus under `fixtures/pubsub-push/`.
+
+### Changed
+
+- `DeliveryDecode` (TS) is now a union,
+  `{kind: "form-field-json", field} | {kind: "pubsub-push"}`, and
+  `DELIVERY_DECODE_KINDS` / `DeliveryDecode::KINDS` gain `"pubsub-push"`. A
+  declaration written as a literal is unaffected. Code that reads `.field` off
+  a `DeliveryDecode` it did not construct must narrow on `kind` first.
+
+`CONNECTOR_API_VERSION` is unchanged: everything here is optional.
+
 ## [0.12.0] - 2026-11-01
 
 ### Added
