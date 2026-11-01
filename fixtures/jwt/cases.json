@@ -1,0 +1,382 @@
+{
+  "suite": "jwt",
+  "title": "RS256 JWT verification against host-supplied keys",
+  "contract": {
+    "summary": "`verifyJwt` (TS) / `Jwt::verify` (PHP): verify a JWS compact token against keys the HOST supplies (the core never fetches a key set). RS256 only; alg none and HS256 refused by name; a kid must name a supplied key; exp REQUIRED; nbf honoured; audience REQUIRED unless the caller passes null on purpose; issuer matched when given. Leeway 60 s. On success the claims are returned verbatim.",
+    "reference": "authored",
+    "referenceNote": "0001 is RFC 7515 Appendix A.2, the published RS256 example, which verifies from the RFC's own JWK and token (checked 2026-11-01). The other rows are signed by a throwaway 2048-bit key generated when this table was written; only its PUBLIC JWK is stored. Reasons are fixed strings."
+  },
+  "cases": [
+    {
+      "id": "0001-rfc7515-a2-valid",
+      "title": "RFC 7515 A.2, the PUBLISHED RS256 example, verifies; audience deliberately unchecked (null) and the issuer matched",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.cC4hiUPoj9Eetdgtv3hF80EGrhuB__dzERat0XF9g2VtQgr9PJbu3XOiZj5RZmh7AAuHIm4Bh-0Qc_lF5YKt_O8W2Fp5jujGbds9uJdbF9CUAr7t1dnZcAcQjbKBYNX4BAynRFdiuB--f_nZLgrnbyTyWzO75vRK5h6xBArLIARNPvkSjtQBMHlb1L07Qe7K0GarZRmB_eSN9383LcOLn6_dO--xi12jzDwusC-eOkHWEsqtFZESc6BfI7noOPqvhJ1phCnvWh6IeYI2w9QOYEUipUTI8np6LbgGY9Fs98rqVt5AXLIhWkWywlVmtVrBp0igcN_IoypGlUPQGe77Rw",
+        "keys": [
+          {
+            "kty": "RSA",
+            "n": "ofgWCuLjybRlzo0tZWJjNiuSfb4p4fAkd_wWJcyQoTbji9k0l8W26mPddxHmfHQp-Vaw-4qPCJrcS2mJPMEzP1Pt0Bm4d4QlL-yRT-SFd2lZS-pCgNMsD1W_YpRPEwOWvG6b32690r2jZ47soMZo9wGzjb_7OMg0LOL-bSf63kpaSHSXndS5z5rexMdbBYUsLA9e-KXBdQOS-UTo7WTBEMa2R2CapHg665xsmtdVMTBQY4uDZlxvb3qCo5ZwKh9kG4LT6_I5IhlJH7aGhyxXFvUK-DWNmoudF8NAco9_h9iaGNj8q2ethFkMLs91kzk2PAcDTW9gb54h4FRWyuXpoQ",
+            "e": "AQAB"
+          }
+        ],
+        "audience": null,
+        "issuer": "joe",
+        "now": 1300819300
+      },
+      "expected": {
+        "ok": true,
+        "claims": {
+          "iss": "joe",
+          "exp": 1300819380,
+          "http://example.com/is_root": true
+        }
+      }
+    },
+    {
+      "id": "0002-rfc7515-a2-expired",
+      "title": "The same token 120 s after its exp, beyond the 60 s leeway: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.cC4hiUPoj9Eetdgtv3hF80EGrhuB__dzERat0XF9g2VtQgr9PJbu3XOiZj5RZmh7AAuHIm4Bh-0Qc_lF5YKt_O8W2Fp5jujGbds9uJdbF9CUAr7t1dnZcAcQjbKBYNX4BAynRFdiuB--f_nZLgrnbyTyWzO75vRK5h6xBArLIARNPvkSjtQBMHlb1L07Qe7K0GarZRmB_eSN9383LcOLn6_dO--xi12jzDwusC-eOkHWEsqtFZESc6BfI7noOPqvhJ1phCnvWh6IeYI2w9QOYEUipUTI8np6LbgGY9Fs98rqVt5AXLIhWkWywlVmtVrBp0igcN_IoypGlUPQGe77Rw",
+        "keys": [
+          {
+            "kty": "RSA",
+            "n": "ofgWCuLjybRlzo0tZWJjNiuSfb4p4fAkd_wWJcyQoTbji9k0l8W26mPddxHmfHQp-Vaw-4qPCJrcS2mJPMEzP1Pt0Bm4d4QlL-yRT-SFd2lZS-pCgNMsD1W_YpRPEwOWvG6b32690r2jZ47soMZo9wGzjb_7OMg0LOL-bSf63kpaSHSXndS5z5rexMdbBYUsLA9e-KXBdQOS-UTo7WTBEMa2R2CapHg665xsmtdVMTBQY4uDZlxvb3qCo5ZwKh9kG4LT6_I5IhlJH7aGhyxXFvUK-DWNmoudF8NAco9_h9iaGNj8q2ethFkMLs91kzk2PAcDTW9gb54h4FRWyuXpoQ",
+            "e": "AQAB"
+          }
+        ],
+        "audience": null,
+        "issuer": "joe",
+        "now": 1300819500
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token has expired"
+      }
+    },
+    {
+      "id": "0002b-rfc7515-a2-within-leeway",
+      "title": "The same token 30 s after its exp, inside the 60 s leeway: accepted",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.cC4hiUPoj9Eetdgtv3hF80EGrhuB__dzERat0XF9g2VtQgr9PJbu3XOiZj5RZmh7AAuHIm4Bh-0Qc_lF5YKt_O8W2Fp5jujGbds9uJdbF9CUAr7t1dnZcAcQjbKBYNX4BAynRFdiuB--f_nZLgrnbyTyWzO75vRK5h6xBArLIARNPvkSjtQBMHlb1L07Qe7K0GarZRmB_eSN9383LcOLn6_dO--xi12jzDwusC-eOkHWEsqtFZESc6BfI7noOPqvhJ1phCnvWh6IeYI2w9QOYEUipUTI8np6LbgGY9Fs98rqVt5AXLIhWkWywlVmtVrBp0igcN_IoypGlUPQGe77Rw",
+        "keys": [
+          {
+            "kty": "RSA",
+            "n": "ofgWCuLjybRlzo0tZWJjNiuSfb4p4fAkd_wWJcyQoTbji9k0l8W26mPddxHmfHQp-Vaw-4qPCJrcS2mJPMEzP1Pt0Bm4d4QlL-yRT-SFd2lZS-pCgNMsD1W_YpRPEwOWvG6b32690r2jZ47soMZo9wGzjb_7OMg0LOL-bSf63kpaSHSXndS5z5rexMdbBYUsLA9e-KXBdQOS-UTo7WTBEMa2R2CapHg665xsmtdVMTBQY4uDZlxvb3qCo5ZwKh9kG4LT6_I5IhlJH7aGhyxXFvUK-DWNmoudF8NAco9_h9iaGNj8q2ethFkMLs91kzk2PAcDTW9gb54h4FRWyuXpoQ",
+            "e": "AQAB"
+          }
+        ],
+        "audience": null,
+        "issuer": "joe",
+        "now": 1300819410
+      },
+      "expected": {
+        "ok": true,
+        "claims": {
+          "iss": "joe",
+          "exp": 1300819380,
+          "http://example.com/is_root": true
+        }
+      }
+    },
+    {
+      "id": "0003-rfc7515-a2-payload-changed",
+      "title": "A different payload under the RFC's signature: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJqb2UiLCJleHAiOjEzMDA4MTkzODAsImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290IjpmYWxzZX0.cC4hiUPoj9Eetdgtv3hF80EGrhuB__dzERat0XF9g2VtQgr9PJbu3XOiZj5RZmh7AAuHIm4Bh-0Qc_lF5YKt_O8W2Fp5jujGbds9uJdbF9CUAr7t1dnZcAcQjbKBYNX4BAynRFdiuB--f_nZLgrnbyTyWzO75vRK5h6xBArLIARNPvkSjtQBMHlb1L07Qe7K0GarZRmB_eSN9383LcOLn6_dO--xi12jzDwusC-eOkHWEsqtFZESc6BfI7noOPqvhJ1phCnvWh6IeYI2w9QOYEUipUTI8np6LbgGY9Fs98rqVt5AXLIhWkWywlVmtVrBp0igcN_IoypGlUPQGe77Rw",
+        "keys": [
+          {
+            "kty": "RSA",
+            "n": "ofgWCuLjybRlzo0tZWJjNiuSfb4p4fAkd_wWJcyQoTbji9k0l8W26mPddxHmfHQp-Vaw-4qPCJrcS2mJPMEzP1Pt0Bm4d4QlL-yRT-SFd2lZS-pCgNMsD1W_YpRPEwOWvG6b32690r2jZ47soMZo9wGzjb_7OMg0LOL-bSf63kpaSHSXndS5z5rexMdbBYUsLA9e-KXBdQOS-UTo7WTBEMa2R2CapHg665xsmtdVMTBQY4uDZlxvb3qCo5ZwKh9kG4LT6_I5IhlJH7aGhyxXFvUK-DWNmoudF8NAco9_h9iaGNj8q2ethFkMLs91kzk2PAcDTW9gb54h4FRWyuXpoQ",
+            "e": "AQAB"
+          }
+        ],
+        "audience": null,
+        "issuer": "joe",
+        "now": 1300819300
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0004-authored-valid",
+      "title": "An authored token: kid matched, audience and issuer matched, inside exp",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.NC0QynglO2d3svvR8NKylLlHzQoy4zUIeDlEax4XCAjYc5uXCEtLNl0EMzU55wZ9aFoPo2idE5t1dmdyzTnxtSHSAGJDCYrZH7EGCVI8YxQsttA1VDfmG4z3ohabUFUKP0pGaXbz87nELdyd791oxdya9AKa3FYEhBJmpvgf-W5_V75fQYGYIpGJzBP7jkCad9mhe4oyxrSLjx5rwktDnPmKB3cMj7KPWzBs5oKaP5wce9OWbbiCnqZHPXC33HrQWxvEhyuthps4G5CK-GACGQ8r_gryvNLi_gRxWm-K7HJ9JiFyYoDdge684NuRKTZaJsjmDW7pfSKJeUSJjXqkXg",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": true,
+        "claims": {
+          "iss": "https://accounts.example.test",
+          "aud": "https://hooks.example.test/gmail",
+          "sub": "1234",
+          "exp": 1767229200,
+          "iat": 1767225590
+        }
+      }
+    },
+    {
+      "id": "0005-audience-array-contains",
+      "title": "aud as an ARRAY that contains the expected audience: accepted",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6WyJvdGhlciIsImh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIl0sInN1YiI6IjEyMzQiLCJleHAiOjE3NjcyMjkyMDAsImlhdCI6MTc2NzIyNTU5MH0.KsCBZu-Di0xM7uPqu2cyPoeN3V5gWvVcomnp7KZ9yVAnA2cd1QKs3J-dZH-SPCXN1j8WJvL7jbz2cMrkwTeScy17_zPYtYjvXVRzZ6G7bDR1AMhbx8M1IYmjkRZNqdB6lfCXsCNMVrVnWEkpGCw6-DBgAFzADE7XwlcNUFbKmT1NlZv4FyUzPzhQeThk-iySD9ZB8y--3w69QiZCEvXA53Ycd0KeheJW5UvFJY8rfEKITudywArTB7RKxRnsWoEUxoPBtNZBo6BNu4j_yfB_saha6GZ0nKBnRcHzjr0EhGaWCIUIiJrY0iflMx100rzytZTBvF90dkiQuuUN1fjLgA",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": true,
+        "claims": {
+          "iss": "https://accounts.example.test",
+          "aud": [
+            "other",
+            "https://hooks.example.test/gmail"
+          ],
+          "sub": "1234",
+          "exp": 1767229200,
+          "iat": 1767225590
+        }
+      }
+    },
+    {
+      "id": "0006-audience-mismatch",
+      "title": "aud names another endpoint: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vZWxzZXdoZXJlLmV4YW1wbGUudGVzdCIsInN1YiI6IjEyMzQiLCJleHAiOjE3NjcyMjkyMDAsImlhdCI6MTc2NzIyNTU5MH0.D3reQe82H_vUFTZe9JxnmZLHb5iPeClZAMuP98zu_CR3cb2wF1ezDquBAXwHcsGopbY47zTFmTQEB0iAb0_u9mjSwPq35h61HKtKvhh4YJm31DyNHCgkVH4cjOECx4OA5IKvaxGOxOPm74Uou70kcmHC-7fHHFwP3CJx132gQ701NycQRJtNubY7MeoPSr9qYaDPLwQP95H-GT2mwvAaY3IA8RlFIY0NxlmwG98BlLhdDz3WRJ_IUAMJC8iJrC3GLAgfi1KNeTsX5F5jmoHA9k7iQLjdE2plEdPl8ZkKsVh8bL7qrj41tqN7LhQNBa7oFidRwMc3qMOpU_FcUPzilg",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token audience is not accepted"
+      }
+    },
+    {
+      "id": "0007-no-audience-claim",
+      "title": "No aud claim while an audience is required: refused, never treated as a match",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImV4cCI6MTc2NzIyOTIwMH0.N3cmUhwCO1fOjJVCni27pnIEKjreyIOi6k1gKVVe8Xxo-4esNjxcSYH57g20Jicq8wLlL14BgdOIdtltFV60-cwJUksF_0j2abnodCq4J_7SbrQBK7A5xeIRJYjW1qdnqqhd4n-7KVDj85Uxu1MtgZ7WX6gizNBwBoqqCkVYl5NwWq0h6KMqEVyLI4rGakWnySARQyyd93Yll4uBuqqoBMLxYSGmmDyPeMnhCt1LFWpe_EvYo296-4mzA4aqOIjMUz4entsChdLoqHeTHvFAw1u88VUnW7AqCoKN3lWpVWKj0FYoHfX6hb192BgXm_qhsZzcoF93ZzR0d-EZFo6zPQ",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token audience is not accepted"
+      }
+    },
+    {
+      "id": "0008-issuer-mismatch",
+      "title": "iss is someone else: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIn0.eyJpc3MiOiJodHRwczovL2V2aWwuZXhhbXBsZS50ZXN0IiwiYXVkIjoiaHR0cHM6Ly9ob29rcy5leGFtcGxlLnRlc3QvZ21haWwiLCJzdWIiOiIxMjM0IiwiZXhwIjoxNzY3MjI5MjAwLCJpYXQiOjE3NjcyMjU1OTB9.cngSus98GePxE4skujadmYCBIod_vMaCZycwmTchBZ2peFa14TXMq6spqke6b8cYaxe2VSFlrNCzvw0TdMcHyHqKczFKTbVGe-MPZRekZPLxhrUsSRtbLZukP3brmu2faSb1qx3hvi9xC5pGC_f05-2z1GkGDH0pN4EteQMdYGFsyTe1ZXEYgkX-O3fxipCmi-JpLiczpiZ7aMbqwml4MHzJxMCrKlmZvhY3YOwMuWMxcvkrveZpVC6pV07Aqi1fBnwcUvfR67PqY3cw_ssL7ysDl9W6UuXO_E3pTlSmvRoLzi0BGOXUHTS-Y_fRnnLr0BOfJzwTo1KtpaarrrHXUQ",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token issuer is not accepted"
+      }
+    },
+    {
+      "id": "0009-alg-none",
+      "title": "alg none: refused by name before anything else",
+      "input": {
+        "token": "eyJhbGciOiJub25lIiwia2lkIjoiazEifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "alg \"none\" is not accepted"
+      }
+    },
+    {
+      "id": "0010-alg-hs256-key-confusion",
+      "title": "alg HS256 keyed with the public key: refused by name (the confusion attack)",
+      "input": {
+        "token": "eyJhbGciOiJIUzI1NiIsImtpZCI6ImsxIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.NivGiyW64IezJ0Dey0j9BTcwRTfCNsmmNiOHEtx2qiA",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "alg \"HS256\" is not accepted"
+      }
+    },
+    {
+      "id": "0011-unknown-kid",
+      "title": "kid names no supplied key: refused, never 'try every key'",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsyIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.WA2XH7KHftDNxOSwOjQR1UlDFq2u1LqGR4pXMQ2_npx6xPfVmAKLv1EdeEYz1OlgI3nmcnBCV23fObdyhAYFS7VZ2ucmOuOKkFszxtqq5KPntZ9acH3pYztYeojfpA4KTrxXwveeArYAZ0CHUkTi5EqxlGtKCfJooC0IaySt-F58fLUp2kR8urEzzx7SGaP3RD-vI5fxRCVCfoi7xBKDQdv0-PwfwK3rGmNCwHADO4e42kO23B24cnOY8RtDC76jfwwMov_hMoOZk08EBhL8fMHSEIVRsxwYUwiP6Oe4x6oV3iPYGrcC-d2N5YDhWsV4oc8FQrWnsAGS3GktWd6nFw",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "no key for kid \"k2\""
+      }
+    },
+    {
+      "id": "0012-no-exp",
+      "title": "A token with no exp never expires: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIn0.NNNX0zx99x6DHMYEbJKvnQ4WB6AuPVuufu2axjD6C0wsNbAXbMBepg_NnNjWCUv3OST_t6lp61T81wHahymRLitDWKry7aNmpMLJ5CatRxOPS6LOHabMNha26jGcDCFiGfAj0pdnVb_u-Dgkn67O-l0T2rHPlFOWHqAJnFx6W7OpwX8X7yVF934SYpvmo56wlk7YhIGYggZZmFzhobbLNcNq9N7GkmvlK7FOTsxAXQJaTYrhfow_B5sc9O_RB2eE10atqW85_TVM9LfmHr57homXxHVpem9RYFuE0MtZpghm5cDJMka5hxmnIoynWzyBMStk_nYISYZD0iVg5Es8mQ",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token has no exp"
+      }
+    },
+    {
+      "id": "0013-not-yet-valid",
+      "title": "nbf beyond the leeway: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImsxIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwLCJuYmYiOjE3NjcyMjYyMDB9.Pv7C7IcTQ3vDjyU7TRg5pmg7uuJa_nMu7dNN2IDGApJVXuQhE43Zkmva0fmOpu7YveAlj-IBHiLLVKrHU6_nGs0XPKrodSCJtj9ASH-vlOSuorizVXJH6W9zswX7Ov2GZOJG14d6MolKhWb0BwX7rwlkBCmdgW1INySx7fTo1vxQLsTSQZIEh9YosCyczUzIBPZA1R6hjztXYKvWKWmq_JBAiNBIVywjYZ8J-YKukzm3ty5khp2B0Umm5zKgInT1oLTxeTqWyIs3MozkRfBsx_rRoleF0S9V5r2kzatEL3vuKqzN9ohwuTDLmnrud5_ZRZkCg00NOMvFgfgCE0Tkeg",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token is not valid yet"
+      }
+    },
+    {
+      "id": "0014-malformed",
+      "title": "Not three segments: refused by name",
+      "input": {
+        "token": "not.a-jwt",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k1",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "msgeY8ddyq9zTQZlZMkf3M9lNJ05MFNqY6YpuMQAtqrBEujzEMax46D6ivUNnuPMOyctKNSyVo_CvBV1NB5e3bnxeZsyxAxAhArTN5TDdeuxQPJWWS1bzdMsFH9RvwttdFyqoPP8qfnmmXSYBCjzuLDDbQmH6QPqBG2mPAY6sXVaUb48EWNnfjsGkcQGdA_hZr79FhFdSE1Fwd4n49w143m3tDSg7cl4UFheuhkDQ8LMWtqSycv-lcrqYJeMqmJ-XUMM1V-ZxDj-v5aFrDU1JKyZ56iSoOMk3XESHzzXf1TPmCIDpPSHvd30b5madQoLAauhbCsydMI6Wdy3XbH1Uw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "token is not a JWS compact serialization"
+      }
+    }
+  ]
+}

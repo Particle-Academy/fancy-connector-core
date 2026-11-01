@@ -36,6 +36,7 @@ export * from "./errors";
 export * from "./faker";
 export * from "./ical";
 export * from "./idempotency";
+export * from "./jwt";
 export * from "./lease";
 export * from "./metrics";
 export * from "./mime";
