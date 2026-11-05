@@ -9,10 +9,15 @@ versioned rendering, chain posting, declared metric shapes, credential-free
 probes, and API-drift reporting.
 
 Matched **TypeScript + PHP**, one repository, **zero runtime dependencies in
-either ecosystem**.
+either ecosystem**. TypeScript and Node apps install it from npm; **PHP apps
+(Laravel included) install it with Composer**. Both packages are released
+together at the same version.
 
 ```bash
+# TypeScript / Node
 npm install @particle-academy/fancy-connector-core
+
+# PHP (Composer)
 composer require particle-academy/fancy-connector-core
 ```
 
