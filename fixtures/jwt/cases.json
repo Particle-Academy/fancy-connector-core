@@ -4,7 +4,7 @@
   "contract": {
     "summary": "`verifyJwt` (TS) / `Jwt::verify` (PHP): verify a JWS compact token against keys the HOST supplies (the core never fetches a key set). RS256 only; alg none and HS256 refused by name; a kid must name a supplied key; exp REQUIRED; nbf honoured; audience REQUIRED unless the caller passes null on purpose; issuer matched when given. Leeway 60 s. On success the claims are returned verbatim.",
     "reference": "authored",
-    "referenceNote": "0001 is RFC 7515 Appendix A.2, the published RS256 example, which verifies from the RFC's own JWK and token (checked 2026-11-01). The other rows are signed by a throwaway 2048-bit key generated when this table was written; only its PUBLIC JWK is stored. Reasons are fixed strings."
+    "referenceNote": "0001 is RFC 7515 Appendix A.2, the published RS256 example, which verifies from the RFC's own JWK and token (checked 2026-11-01). The other rows are signed by a throwaway 2048-bit key generated when this table was written; only its PUBLIC JWK is stored. Reasons are fixed strings. 0015-0024 (added 2026-11-06, Fancy's review) are signed by a further throwaway key k3, its public JWK in each row: wrong signature lengths, values at and above the modulus, and VALID raw-RSA signatures over malformed EMSA-PKCS1-v1_5 blocks whose last 32 bytes are still the right digest, so only a byte-for-byte comparison of the whole block refuses all of them. 0015 is their control."
   },
   "cases": [
     {
@@ -376,6 +376,252 @@
       "expected": {
         "ok": false,
         "reason": "token is not a JWS compact serialization"
+      }
+    },
+    {
+      "id": "0015-k3-control-valid",
+      "title": "Control for the rows below: the same claims, properly signed with k3: accepted",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImszIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.SKvDuhWH4L-nZEkY6fJ8jOOVH0uI6ajgN3-QgaG5s86XjhWNdHrVT5tSBOYzS43dSwodYMg2j9XwsrnHbCn3HwfTmw29xm3PilCIw5VDBHidq7xBeCAuu984aFyddCrIF4FUbSzCN5r8xz-9DXoFFxogEIrmh2YTNkt01dKW-55tR3MtLaYw2ad37SCZPSF29ifw5uXBM00e0ap-H1ohFTMMtznp0fBeuzfqLfZdKSw-MK0eW42226JdUNfyEBE_cNDAclAGIQs_1-XF_MOuLh1FSetp4DmxeSCyLlIXVLQJXXIuj_UU4X5kBR4xLqCUQ_dpFVzd5qp5HwVt_imnKA",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k3",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": true,
+        "claims": {
+          "iss": "https://accounts.example.test",
+          "aud": "https://hooks.example.test/gmail",
+          "sub": "1234",
+          "exp": 1767229200,
+          "iat": 1767225590
+        }
+      }
+    },
+    {
+      "id": "0016-signature-one-byte-short",
+      "title": "A signature one byte SHORTER than the modulus: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImszIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.q8O6FYfgv6dkSRjp8nyM45UfS4jpqOA3f5CBobmzzpeOFY10etVPm1IE5jNLjd1LCh1gyDaP1fCyucdsKfcfB9ObDb3Gbc-KUIjDlUMEeJ2rvEF4IC673zhoXJ10KsgXgVRtLMI3mvzHP70NegUXGiAQiuaHZhM2S3TV0pb7nm1Hcy0tpjDZp3ftIJk9IXb2J_Dm5cEzTR7Rqn4fWiEVMwy3OenR8F67N-ot9l0pLD4wrR5bjbbbol1Q1_IQET9w0MByUAYhCz_X5cX8w64uHUVJ62ngObF5ILIuUhdUtAldci6P9RThfmQFHjEuoJRD92kVXN3mqnkfBW3-Kaco",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k3",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0017-signature-one-byte-long",
+      "title": "A signature one byte LONGER than the modulus (a leading zero): refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImszIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.AEirw7oVh-C_p2RJGOnyfIzjlR9LiOmo4Dd_kIGhubPOl44VjXR61U-bUgTmM0uN3UsKHWDINo_V8LK5x2wp9x8H05sNvcZtz4pQiMOVQwR4nau8QXggLrvfOGhcnXQqyBeBVG0swjea_Mc_vQ16BRcaIBCK5odmEzZLdNXSlvuebUdzLS2mMNmnd-0gmT0hdvYn8OblwTNNHtGqfh9aIRUzDLc56dHwXrs36i32XSksPjCtHluNttuiXVDX8hARP3DQwHJQBiELP9flxfzDri4dRUnraeA5sXkgsi5SF1S0CV1yLo_1FOF-ZAUeMS6glEP3aRVc3eaqeR8Fbf4ppyg",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k3",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0018-signature-equals-modulus",
+      "title": "A signature whose value EQUALS n: out of range, refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImszIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k3",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0019-signature-above-modulus",
+      "title": "A signature of all 0xFF bytes, ABOVE n: out of range, refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImszIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ._____________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________w",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k3",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0020-encoding-bad-padding-byte",
+      "title": "A valid RSA signature over a block with ONE padding byte not 0xFF, the digest right: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImszIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.g4QN7p9nTqO7tSFN8I1r6-S1j9zQO_12e3_obfD0x1yN4h134E3y5E5wLUVpjvecyDyOFhp_cwoU1xURdomu1Ke71xKYaxcwsqnbvjSiXchpWgBKBID8PrUJIZ_3cPOmHuWcmG3DCi1DaKhWnFPyZwLtvvNQOnXplaUttoLFX6ufjt2h-ECt44W-uVuVY5lNOyS_8EuMz50ynn4HNhN-jOez-L5gq3zCtwcqE8XFLpaG9NJvrbkNXHCOt5bg-ZCCBq8NKVcthP4vRyVj2T8KUmIQUAvP149qUBHtHkGdwTfKsuyCW9s-GonAhtNLVNKdonuw1XYbNgnLd9E-L5UMgQ",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k3",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0021-encoding-sha1-digestinfo",
+      "title": "A valid RSA signature over a block naming SHA-1 in its DigestInfo, the SHA-256 digest right: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImszIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.C-pwU4zLT2ovOBR0m_zL600DBbL1d_9hViO_02xCwzUK8HHfr0eU-IR21_BgJjumvTbRbbiwZeX6whaeGOtbM9VGqVlF4_EOFoLxfbPS-KXg8TTFO3bZHq46oKdTovs98AwsRtpFoHtSkr8VgZguFB1IpKIHpcJotyDhkFFy6NzI5rsWazEzNU0ytg7k_1B-OJFYgOvvBnIKnPPVsXAJs_mfsW4hodKdiIPX7heAsf1bXxjaf23n-MLTPKgFXMLHvTeVoStzYvR-XbgyY3lCWimv5ThqQ3Ba_zF_XWE_LuVnu-QzscjkHM3xPJsjdJRzSs73BFRVI9rddpOShSRGwQ",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k3",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0022-encoding-block-type-2",
+      "title": "A valid RSA signature over a block of type 02 (encryption padding), the digest right: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImszIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.nD7Er86252PY_u0czkn2cmg_VqkQ90A49llYbymRsKow_cdfdrM_RS9DOHA0cYATjkSl3lrLD30zsv-ocxpMJYagoDfsFy3IRAKp0cFnO8EG7-13sh4Y36sM54NUgPcQGstUwuv8R0OwxTbYRHCwIDV2NsozlfwuLJqx-leusMhh7DU7w5FJlyZfVHdYz907eiNTqOJa93G4CFKryrGua7iIJ5PYQ0W1mAwSi08xHhsLBc3JezfIRx8obREkwcIbBm7UK9XT_fUP8_G0TNRQfJA9umnFg1QXp_zqizfnmS2xaHdbKpzo7DRtd_3egHPgx2UGBhfAYPKokdFBkAMA5w",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k3",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0023-encoding-garbage-before-digest",
+      "title": "A valid RSA signature over a short padding, garbage, then the right digest last: refused (the e=3 forgery shape)",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImszIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.ZdqbZ_KHz6qY6bqI0yJTMKJ4iI5KdPNi767SrEuQC6c74Aig0KLq8-FPbrnQ3c7hXFTadG0ugRjpw99w7m0Imo-vFFM7Fctdd49hfap5MbPsDaoVHbssuzAtBKvZACXWCyCOU8kucumyOIB7BNyJknC6S1CN5njxAIPqafKvZKuaQdZta1hxYf2ILfTm4Xlq3eDKr264xj3nUzudQxqPdTjy5T8bP_Dtx5M1-3jmb0riEYO2PDJ4_qjjpp3HESLornEYWu_EbQb7U0_eWtEJuMI5x1-kKmO31SI5bdJ4PhWM3XFqkhwn5WZqyD1cyGfr8mtUdkXMcpvI02owhp_q5Q",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k3",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
+      }
+    },
+    {
+      "id": "0024-encoding-no-separator",
+      "title": "A valid RSA signature over a block missing its 00 separator, the digest right: refused",
+      "input": {
+        "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImszIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmV4YW1wbGUudGVzdCIsImF1ZCI6Imh0dHBzOi8vaG9va3MuZXhhbXBsZS50ZXN0L2dtYWlsIiwic3ViIjoiMTIzNCIsImV4cCI6MTc2NzIyOTIwMCwiaWF0IjoxNzY3MjI1NTkwfQ.IjseFl790ISNXlLa6yOhhPjVfdNrx3mQLvbCGAugxdaTeDTmxcWsuVGE5akgqoIFhoQFWqhSRNcbjhQFe7eeITYq85_7Pk2AQ7Dc_kglp3JwW4jFh8Kn7kvbQ1Njjl6AgPdQ2kKWicmxtMareavwznKm0CuS5tGTlCEeiAGQaX-7MqVGVgs8BtfpXp-x08_LI5m2olMW7ZH6gjw7T1GjbRm9e4BTBkiwXUYN3VhY8q_VUIpK97mzNLLHnIY9G0dgcb3C_IsdYyIhkcNr71OjF9ObPgNFjrPzeCxSmA9gFJd9Qv_8rTBaAOlhE1jIPWWg6gcqltAR--_P0XdURglAew",
+        "keys": [
+          {
+            "kty": "RSA",
+            "kid": "k3",
+            "use": "sig",
+            "alg": "RS256",
+            "n": "rGjB_PS7Qsqt2_glq8SzydqCuwg1BytzrbEjLj_mNTpGex05iGC8_SJedSAYSskYAPhIL-_wPb1hBBLK2_1sBbE79kBd4WHlDRCv0gUv8zP8F--lJCENhZNMYDGZfKr06lcLGXednwWQ2ypov3MiyRjHEcmezAlxp7yd9dGVDuzQPtkv7PjedESALheVfYKTdYC1TpJIMnxmp5ISGJD5Kgy3VIb7Lb4ibVjkiL4Wa5yAeqSV-RFHv8upIcCAmK8E1Jt2o2u1yDeEWZhp2ewKsIld2CfUAAKy7ZZQOvoW4KOdPKt1TTDklYHaj9OSdZVfmslpacwSlYqn5akf3lZsFw",
+            "e": "AQAB"
+          }
+        ],
+        "audience": "https://hooks.example.test/gmail",
+        "issuer": "https://accounts.example.test",
+        "now": 1767225600
+      },
+      "expected": {
+        "ok": false,
+        "reason": "signature did not match"
       }
     }
   ]
