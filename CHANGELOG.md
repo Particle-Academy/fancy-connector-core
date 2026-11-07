@@ -6,6 +6,42 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.14.0] - 2026-11-07
+
+### Added
+
+- **`readWithCursor` / `CursorRead::read`: a read that resumes from a
+  HOST-HELD cursor, and pages.** It's for Gmail's `history.list` after a push,
+  and Drive's `changes.list` after a channel notification, where the delivery
+  says only that something moved. The package holds no state: the host stores
+  the cursor, passes it in, and persists `cursor.next` when the run succeeds.
+  - `next` is read ONLY from the LAST page: Gmail's `historyId` is the
+    mailbox's current one on every page.
+  - More than `page.maxPages` is refused as `cursor-overflow`, never a partial
+    read.
+  - The provider's `expiredStatus` (Gmail's 404) is refused as
+    `cursor-expired`. Every other failure is rethrown unchanged.
+  - No stored cursor is refused as `cursor-missing`, and the provider is not
+    called.
+  - A collected list that's absent is `[]`; one that isn't a list is
+    `bad-page`.
+  - Cursors are strings.
+  - A refusal carries the caller's `resyncQuery`.
+
+  The reasons ship as data (`CURSOR_READ_REASONS`, `CursorRead::REASONS`).
+  Both runtimes read `fixtures/cursor-read/cases.json`: 14 authored cases
+  against a scripted provider, every call compared.
+
+### Changed
+
+- The README and the npm description now say plainly that PHP apps install
+  the package with Composer.
+- `fixtures/jwt` gains rows 0015 to 0024: signature length, values at and
+  above the modulus, and valid RSA signatures over malformed PKCS#1 v1.5
+  blocks.
+
+`CONNECTOR_API_VERSION` is unchanged: everything here is optional.
+
 ## [0.13.0] - 2026-11-01
 
 ### Added

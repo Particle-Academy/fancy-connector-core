@@ -344,6 +344,20 @@ base64 alphabet, padded or not, parsed as JSON, refused BY NAME
 `data-not-json`), held to `fixtures/pubsub-push/`. PHP reads the SHAPE from an
 object decode, because an associative decode makes `{}` and `[]` the same.
 
+**A push that says only "something moved" is followed by a CURSOR read**
+(`readWithCursor` / `CursorRead::read`, 0.14.0): Gmail's push carries the
+mailbox's NEW position, and reading from it misses the change that caused it,
+so the read starts from the cursor the HOST stored and the package holds no
+state. Held to `fixtures/cursor-read/`, a scripted provider whose every call
+is compared. `next` comes ONLY from the LAST page, because Gmail's `historyId`
+is the mailbox's current one on every page and Google says to store it only
+when there is no `nextPageToken`; taking it earlier skips the unread pages in
+silence. More than `maxPages` is `cursor-overflow`, never a partial read; the
+provider's `expiredStatus` (Gmail's 404) is `cursor-expired`, and every other
+failure is rethrown unchanged; no stored cursor is `cursor-missing` with no
+call made; a refusal carries the caller's `resyncQuery` for the host's bounded
+re-list.
+
 **A pure RFC 5545 invite parser lives here too, for MOIC's meeting bot**
 (`src/ical.ts` / `Ical.php`), written from scratch — no third-party ical
 library — and held to `fixtures/ical/`, the same authored-corpus discipline

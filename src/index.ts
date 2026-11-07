@@ -30,6 +30,7 @@ export * from "./chain";
 export * from "./compat";
 export * from "./client";
 export * from "./connection";
+export * from "./cursor-read";
 export * from "./delivery";
 export * from "./drift";
 export * from "./errors";

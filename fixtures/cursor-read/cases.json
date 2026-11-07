@@ -1,0 +1,656 @@
+{
+  "suite": "cursor-read",
+  "title": "A read that resumes from a host-held cursor, and pages",
+  "contract": {
+    "summary": "`readWithCursor` (TS) / `CursorRead::read` (PHP): call the provider with `spec.param` = the HOST's stored cursor (missing or empty: cursor-missing, no call); follow `page.param`/`page.from` and concatenate `page.collect` (absent: []; not a list: bad-page) up to `page.maxPages` calls (a further token: cursor-overflow); a failure with `spec.expiredStatus`: cursor-expired; any other failure is rethrown unchanged. The result is the LAST page's data with `collect` replaced by the concatenation, and `cursor: {used, next}`, `next` read from the LAST page's `advanceFrom` only (absent: null), both as strings. The package holds no state: the host persists `next`.",
+    "reference": "authored",
+    "referenceNote": "Shapes follow Gmail's history.list and Drive's changes.list; every expectation is decided by rule, written before any implementation existed."
+  },
+  "cases": [
+    {
+      "id": "0001-one-page",
+      "title": "One page, no nextPageToken: one call, the read's data as given, next from the page",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "100",
+        "responses": [
+          {
+            "data": {
+              "history": [
+                {
+                  "id": "h1"
+                }
+              ],
+              "historyId": "105"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "100"
+          }
+        ],
+        "result": {
+          "data": {
+            "history": [
+              {
+                "id": "h1"
+              }
+            ],
+            "historyId": "105"
+          },
+          "cursor": {
+            "used": "100",
+            "next": "105"
+          }
+        }
+      }
+    },
+    {
+      "id": "0002-three-pages-concatenated",
+      "title": "Three pages: pageToken followed, `history` concatenated in order, the last page's other fields kept",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "100",
+        "responses": [
+          {
+            "data": {
+              "history": [
+                {
+                  "id": "a"
+                }
+              ],
+              "nextPageToken": "t1",
+              "historyId": "110"
+            }
+          },
+          {
+            "data": {
+              "history": [
+                {
+                  "id": "b"
+                }
+              ],
+              "nextPageToken": "t2",
+              "historyId": "111"
+            }
+          },
+          {
+            "data": {
+              "history": [
+                {
+                  "id": "c"
+                }
+              ],
+              "historyId": "112"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "100"
+          },
+          {
+            "startHistoryId": "100",
+            "pageToken": "t1"
+          },
+          {
+            "startHistoryId": "100",
+            "pageToken": "t2"
+          }
+        ],
+        "result": {
+          "data": {
+            "history": [
+              {
+                "id": "a"
+              },
+              {
+                "id": "b"
+              },
+              {
+                "id": "c"
+              }
+            ],
+            "historyId": "112"
+          },
+          "cursor": {
+            "used": "100",
+            "next": "112"
+          }
+        }
+      }
+    },
+    {
+      "id": "0003-next-only-from-the-last-page",
+      "title": "Earlier pages carry a NEWER-looking historyId than the last: next is still the LAST page's, never an earlier one",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "100",
+        "responses": [
+          {
+            "data": {
+              "history": [
+                {
+                  "id": "a"
+                }
+              ],
+              "nextPageToken": "t1",
+              "historyId": "999"
+            }
+          },
+          {
+            "data": {
+              "history": [
+                {
+                  "id": "b"
+                }
+              ],
+              "historyId": "112"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "100"
+          },
+          {
+            "startHistoryId": "100",
+            "pageToken": "t1"
+          }
+        ],
+        "result": {
+          "data": {
+            "history": [
+              {
+                "id": "a"
+              },
+              {
+                "id": "b"
+              }
+            ],
+            "historyId": "112"
+          },
+          "cursor": {
+            "used": "100",
+            "next": "112"
+          }
+        }
+      }
+    },
+    {
+      "id": "0004-no-changes-collect-absent",
+      "title": "No changes: Gmail omits `history` entirely; it is published as [] so downstream always finds a list",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "100",
+        "responses": [
+          {
+            "data": {
+              "historyId": "100"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "100"
+          }
+        ],
+        "result": {
+          "data": {
+            "historyId": "100",
+            "history": []
+          },
+          "cursor": {
+            "used": "100",
+            "next": "100"
+          }
+        }
+      }
+    },
+    {
+      "id": "0005-numeric-cursor-is-a-string",
+      "title": "A cursor or next spelled as a JSON number comes back as a string: history ids are uint64",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": 100,
+        "responses": [
+          {
+            "data": {
+              "history": [],
+              "historyId": 105
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "100"
+          }
+        ],
+        "result": {
+          "data": {
+            "history": [],
+            "historyId": 105
+          },
+          "cursor": {
+            "used": "100",
+            "next": "105"
+          }
+        }
+      }
+    },
+    {
+      "id": "0006-expired-on-first-call",
+      "title": "The provider's expiredStatus (Gmail 404) on the first call: refused as cursor-expired",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "1",
+        "responses": [
+          {
+            "error": {
+              "status": 404
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "1"
+          }
+        ],
+        "refused": "cursor-expired"
+      }
+    },
+    {
+      "id": "0007-expired-on-a-later-page",
+      "title": "404 on page two: the WHOLE read is refused as cursor-expired; nothing partial is published",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "100",
+        "responses": [
+          {
+            "data": {
+              "history": [
+                {
+                  "id": "a"
+                }
+              ],
+              "nextPageToken": "t1",
+              "historyId": "110"
+            }
+          },
+          {
+            "error": {
+              "status": 404
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "100"
+          },
+          {
+            "startHistoryId": "100",
+            "pageToken": "t1"
+          }
+        ],
+        "refused": "cursor-expired"
+      }
+    },
+    {
+      "id": "0008-other-failure-passes-through",
+      "title": "Any OTHER failure (a 500) is rethrown as the provider's own error, never re-labelled as a cursor problem",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "100",
+        "responses": [
+          {
+            "error": {
+              "status": 500
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "100"
+          }
+        ],
+        "failed": {
+          "status": 500
+        }
+      }
+    },
+    {
+      "id": "0009-overflow-after-max-pages",
+      "title": "maxPages 3 and a fourth token still offered: refused as cursor-overflow after exactly three calls",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "100",
+        "responses": [
+          {
+            "data": {
+              "history": [
+                {
+                  "id": "a"
+                }
+              ],
+              "nextPageToken": "t1",
+              "historyId": "110"
+            }
+          },
+          {
+            "data": {
+              "history": [
+                {
+                  "id": "b"
+                }
+              ],
+              "nextPageToken": "t2",
+              "historyId": "111"
+            }
+          },
+          {
+            "data": {
+              "history": [
+                {
+                  "id": "c"
+                }
+              ],
+              "nextPageToken": "t3",
+              "historyId": "112"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "100"
+          },
+          {
+            "startHistoryId": "100",
+            "pageToken": "t1"
+          },
+          {
+            "startHistoryId": "100",
+            "pageToken": "t2"
+          }
+        ],
+        "refused": "cursor-overflow"
+      }
+    },
+    {
+      "id": "0010-cursor-missing",
+      "title": "No stored cursor (the host never seeded one): refused as cursor-missing, and the provider is not called",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": null,
+        "responses": []
+      },
+      "expected": {
+        "calls": [],
+        "refused": "cursor-missing"
+      }
+    },
+    {
+      "id": "0011-cursor-empty-string",
+      "title": "An empty cursor is no cursor: cursor-missing, not a read from the beginning of time",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "",
+        "responses": []
+      },
+      "expected": {
+        "calls": [],
+        "refused": "cursor-missing"
+      }
+    },
+    {
+      "id": "0012-collect-not-a-list",
+      "title": "`history` present but not a list: refused as bad-page rather than published as something else",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "100",
+        "responses": [
+          {
+            "data": {
+              "history": {
+                "id": "a"
+              },
+              "historyId": "105"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "100"
+          }
+        ],
+        "refused": "bad-page"
+      }
+    },
+    {
+      "id": "0013-no-next-on-the-last-page",
+      "title": "The last page carries no advanceFrom value: next is null, and the host keeps the cursor it used",
+      "input": {
+        "spec": {
+          "param": "startHistoryId",
+          "advanceFrom": "historyId",
+          "page": {
+            "param": "pageToken",
+            "from": "nextPageToken",
+            "collect": "history",
+            "maxPages": 3
+          },
+          "expiredStatus": 404
+        },
+        "cursor": "100",
+        "responses": [
+          {
+            "data": {
+              "history": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "startHistoryId": "100"
+          }
+        ],
+        "result": {
+          "data": {
+            "history": []
+          },
+          "cursor": {
+            "used": "100",
+            "next": null
+          }
+        }
+      }
+    },
+    {
+      "id": "0014-no-paging-declared",
+      "title": "A spec with no `page`: exactly one call, the data as given, next from advanceFrom",
+      "input": {
+        "spec": {
+          "param": "pageToken",
+          "advanceFrom": "newStartPageToken",
+          "expiredStatus": 404
+        },
+        "cursor": "p1",
+        "responses": [
+          {
+            "data": {
+              "changes": [
+                {
+                  "fileId": "f"
+                }
+              ],
+              "newStartPageToken": "p2"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "calls": [
+          {
+            "pageToken": "p1"
+          }
+        ],
+        "result": {
+          "data": {
+            "changes": [
+              {
+                "fileId": "f"
+              }
+            ],
+            "newStartPageToken": "p2"
+          },
+          "cursor": {
+            "used": "p1",
+            "next": "p2"
+          }
+        }
+      }
+    }
+  ]
+}
