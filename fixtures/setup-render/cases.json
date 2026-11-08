@@ -2,155 +2,487 @@
   "suite": "setup-render",
   "title": "A connector's setup steps, rendered for one app",
   "contract": {
-    "summary": "`renderSetup(steps, context)` (TS) / `Setup::render($steps, $context)` (PHP): substitute `{{appUrl}}`, `{{appName}}` and `{{connector}}` in every text a person or agent reads — title, detail, url, prompt, done, and each copy value and label. `appUrl` loses ONE trailing slash first, so `{{appUrl}}/hooks` never doubles it. Anything else shaped like `{{...}}` is refused as `unknown-token` (a typo must not reach a person as a literal brace); a token whose context value is missing or empty is refused as `missing-context`. `actor` defaults to `person`; `fields` defaults to []; every other field absent stays absent. Steps are returned in order; the input is not modified.",
-    "reasons": ["unknown-token", "missing-context"],
-    "tokens": ["appUrl", "appName", "connector"]
+    "summary": "`renderSetup(steps, context)` (TS) / `Setup::render($steps, $context)` (PHP): substitute `{{appUrl}}`, `{{appName}}`, `{{connector}}`, `{{webhookUrl}}` and `{{oauthRedirectUrl}}` (0.15.1: the last two are the HOST's own URLs, as the host knows them, inserted verbatim) in every text a person or agent reads — title, detail, url, prompt, done, and each copy value and label. `appUrl` loses ONE trailing slash first, so `{{appUrl}}/hooks` never doubles it. Anything else shaped like `{{...}}` is refused as `unknown-token` (a typo must not reach a person as a literal brace); a token whose context value is missing or empty is refused as `missing-context`. `actor` defaults to `person`; `fields` defaults to []; every other field absent stays absent. Steps are returned in order; the input is not modified.",
+    "reasons": [
+      "unknown-token",
+      "missing-context"
+    ],
+    "tokens": [
+      "appUrl",
+      "appName",
+      "connector",
+      "webhookUrl",
+      "oauthRedirectUrl"
+    ]
   },
   "cases": [
     {
       "id": "plain",
       "title": "a step with no tokens comes back unchanged, actor person and fields []",
       "input": {
-        "context": { "appUrl": "https://moic.app", "appName": "MOIC", "connector": "twilio" },
-        "steps": [{ "title": "Open the console", "detail": "Sign in to the Twilio Console." }]
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "twilio"
+        },
+        "steps": [
+          {
+            "title": "Open the console",
+            "detail": "Sign in to the Twilio Console."
+          }
+        ]
       },
-      "expected": { "steps": [{ "title": "Open the console", "detail": "Sign in to the Twilio Console.", "actor": "person", "fields": [] }] }
+      "expected": {
+        "steps": [
+          {
+            "title": "Open the console",
+            "detail": "Sign in to the Twilio Console.",
+            "actor": "person",
+            "fields": []
+          }
+        ]
+      }
     },
     {
       "id": "every-field",
       "title": "tokens are substituted in title, detail, url, prompt, done and copy",
       "input": {
-        "context": { "appUrl": "https://moic.app", "appName": "MOIC", "connector": "twilio" },
-        "steps": [{
-          "title": "Point {{connector}} at {{appName}}",
-          "detail": "Paste {{appUrl}}/hooks/{{connector}} as the callback.",
-          "url": "https://console.twilio.com/?from={{appName}}",
-          "actor": "agent",
-          "prompt": "Set the status callback of {{appName}} to {{appUrl}}/hooks/{{connector}}.",
-          "done": "{{appName}} shows {{connector}} as connected.",
-          "copy": [{ "label": "{{appName}} callback", "value": "{{appUrl}}/hooks/{{connector}}" }],
-          "fields": ["accountSid"]
-        }]
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "twilio"
+        },
+        "steps": [
+          {
+            "title": "Point {{connector}} at {{appName}}",
+            "detail": "Paste {{appUrl}}/hooks/{{connector}} as the callback.",
+            "url": "https://console.twilio.com/?from={{appName}}",
+            "actor": "agent",
+            "prompt": "Set the status callback of {{appName}} to {{appUrl}}/hooks/{{connector}}.",
+            "done": "{{appName}} shows {{connector}} as connected.",
+            "copy": [
+              {
+                "label": "{{appName}} callback",
+                "value": "{{appUrl}}/hooks/{{connector}}"
+              }
+            ],
+            "fields": [
+              "accountSid"
+            ]
+          }
+        ]
       },
-      "expected": { "steps": [{
-        "title": "Point twilio at MOIC",
-        "detail": "Paste https://moic.app/hooks/twilio as the callback.",
-        "url": "https://console.twilio.com/?from=MOIC",
-        "actor": "agent",
-        "prompt": "Set the status callback of MOIC to https://moic.app/hooks/twilio.",
-        "done": "MOIC shows twilio as connected.",
-        "copy": [{ "label": "MOIC callback", "value": "https://moic.app/hooks/twilio" }],
-        "fields": ["accountSid"]
-      }] }
+      "expected": {
+        "steps": [
+          {
+            "title": "Point twilio at MOIC",
+            "detail": "Paste https://moic.app/hooks/twilio as the callback.",
+            "url": "https://console.twilio.com/?from=MOIC",
+            "actor": "agent",
+            "prompt": "Set the status callback of MOIC to https://moic.app/hooks/twilio.",
+            "done": "MOIC shows twilio as connected.",
+            "copy": [
+              {
+                "label": "MOIC callback",
+                "value": "https://moic.app/hooks/twilio"
+              }
+            ],
+            "fields": [
+              "accountSid"
+            ]
+          }
+        ]
+      }
     },
     {
       "id": "trailing-slash",
       "title": "appUrl loses one trailing slash, so {{appUrl}}/path never doubles it",
       "input": {
-        "context": { "appUrl": "https://moic.app/", "appName": "MOIC", "connector": "resend" },
-        "steps": [{ "title": "Webhook", "detail": "{{appUrl}}/hooks/resend" }]
+        "context": {
+          "appUrl": "https://moic.app/",
+          "appName": "MOIC",
+          "connector": "resend"
+        },
+        "steps": [
+          {
+            "title": "Webhook",
+            "detail": "{{appUrl}}/hooks/resend"
+          }
+        ]
       },
-      "expected": { "steps": [{ "title": "Webhook", "detail": "https://moic.app/hooks/resend", "actor": "person", "fields": [] }] }
+      "expected": {
+        "steps": [
+          {
+            "title": "Webhook",
+            "detail": "https://moic.app/hooks/resend",
+            "actor": "person",
+            "fields": []
+          }
+        ]
+      }
     },
     {
       "id": "subpath",
       "title": "an app under a path keeps its path",
       "input": {
-        "context": { "appUrl": "https://example.org/moic", "appName": "MOIC", "connector": "stripe" },
-        "steps": [{ "title": "Endpoint", "detail": "{{appUrl}}/hooks/stripe" }]
+        "context": {
+          "appUrl": "https://example.org/moic",
+          "appName": "MOIC",
+          "connector": "stripe"
+        },
+        "steps": [
+          {
+            "title": "Endpoint",
+            "detail": "{{appUrl}}/hooks/stripe"
+          }
+        ]
       },
-      "expected": { "steps": [{ "title": "Endpoint", "detail": "https://example.org/moic/hooks/stripe", "actor": "person", "fields": [] }] }
+      "expected": {
+        "steps": [
+          {
+            "title": "Endpoint",
+            "detail": "https://example.org/moic/hooks/stripe",
+            "actor": "person",
+            "fields": []
+          }
+        ]
+      }
     },
     {
       "id": "repeated",
       "title": "a token used twice is substituted twice",
       "input": {
-        "context": { "appUrl": "https://moic.app", "appName": "MOIC", "connector": "slack" },
-        "steps": [{ "title": "{{appName}}", "detail": "{{appName}} and {{appName}}" }]
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "slack"
+        },
+        "steps": [
+          {
+            "title": "{{appName}}",
+            "detail": "{{appName}} and {{appName}}"
+          }
+        ]
       },
-      "expected": { "steps": [{ "title": "MOIC", "detail": "MOIC and MOIC", "actor": "person", "fields": [] }] }
+      "expected": {
+        "steps": [
+          {
+            "title": "MOIC",
+            "detail": "MOIC and MOIC",
+            "actor": "person",
+            "fields": []
+          }
+        ]
+      }
     },
     {
       "id": "order",
       "title": "steps come back in order",
       "input": {
-        "context": { "appUrl": "https://moic.app", "appName": "MOIC", "connector": "hubspot" },
-        "steps": [{ "title": "one", "detail": "a" }, { "title": "two", "detail": "b" }, { "title": "three", "detail": "c" }]
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "hubspot"
+        },
+        "steps": [
+          {
+            "title": "one",
+            "detail": "a"
+          },
+          {
+            "title": "two",
+            "detail": "b"
+          },
+          {
+            "title": "three",
+            "detail": "c"
+          }
+        ]
       },
-      "expected": { "steps": [
-        { "title": "one", "detail": "a", "actor": "person", "fields": [] },
-        { "title": "two", "detail": "b", "actor": "person", "fields": [] },
-        { "title": "three", "detail": "c", "actor": "person", "fields": [] }
-      ] }
+      "expected": {
+        "steps": [
+          {
+            "title": "one",
+            "detail": "a",
+            "actor": "person",
+            "fields": []
+          },
+          {
+            "title": "two",
+            "detail": "b",
+            "actor": "person",
+            "fields": []
+          },
+          {
+            "title": "three",
+            "detail": "c",
+            "actor": "person",
+            "fields": []
+          }
+        ]
+      }
     },
     {
       "id": "value-not-reexpanded",
       "title": "a context value containing a token is NOT expanded again",
       "input": {
-        "context": { "appUrl": "https://moic.app", "appName": "{{connector}}", "connector": "zoom" },
-        "steps": [{ "title": "t", "detail": "{{appName}}" }]
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "{{connector}}",
+          "connector": "zoom"
+        },
+        "steps": [
+          {
+            "title": "t",
+            "detail": "{{appName}}"
+          }
+        ]
       },
-      "expected": { "steps": [{ "title": "t", "detail": "{{connector}}", "actor": "person", "fields": [] }] }
+      "expected": {
+        "steps": [
+          {
+            "title": "t",
+            "detail": "{{connector}}",
+            "actor": "person",
+            "fields": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "host-urls",
+      "title": "webhookUrl and oauthRedirectUrl are inserted verbatim: no slash trimmed, no layout assumed",
+      "input": {
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "twilio",
+          "webhookUrl": "https://moic.app/hooks/twilio/status/",
+          "oauthRedirectUrl": "https://moic.app/oauth/hubspot/callback"
+        },
+        "steps": [
+          {
+            "title": "t",
+            "detail": "Status callback: {{webhookUrl}}",
+            "copy": [
+              {
+                "label": "Redirect URI",
+                "value": "{{oauthRedirectUrl}}"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "title": "t",
+            "detail": "Status callback: https://moic.app/hooks/twilio/status/",
+            "actor": "person",
+            "copy": [
+              {
+                "label": "Redirect URI",
+                "value": "https://moic.app/oauth/hubspot/callback"
+              }
+            ],
+            "fields": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "missing-webhook-url",
+      "title": "a step naming {{webhookUrl}} with none supplied is refused",
+      "input": {
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "stripe"
+        },
+        "steps": [
+          {
+            "title": "t",
+            "detail": "{{webhookUrl}}"
+          }
+        ]
+      },
+      "expected": {
+        "refused": "missing-context"
+      }
+    },
+    {
+      "id": "old-host-syntax",
+      "title": "the pre-0.15.1 {host.webhookUrl} spelling is NOT a token here and passes through as text",
+      "input": {
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "twilio",
+          "webhookUrl": "https://moic.app/hooks/twilio/status/",
+          "oauthRedirectUrl": "https://moic.app/oauth/hubspot/callback"
+        },
+        "steps": [
+          {
+            "title": "t",
+            "detail": "{host.webhookUrl}"
+          }
+        ]
+      },
+      "expected": {
+        "steps": [
+          {
+            "title": "t",
+            "detail": "{host.webhookUrl}",
+            "actor": "person",
+            "fields": []
+          }
+        ]
+      }
     },
     {
       "id": "unknown-token",
-      "title": "a token outside the three is refused, never shown as a literal brace",
+      "title": "a token outside the closed set is refused, never shown as a literal brace: {{webhookURL}}, a one-letter typo",
       "input": {
-        "context": { "appUrl": "https://moic.app", "appName": "MOIC", "connector": "twilio" },
-        "steps": [{ "title": "t", "detail": "Paste {{webhookUrl}} here." }]
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "twilio"
+        },
+        "steps": [
+          {
+            "title": "t",
+            "detail": "Paste {{webhookURL}} here."
+          }
+        ]
       },
-      "expected": { "refused": "unknown-token" }
+      "expected": {
+        "refused": "unknown-token"
+      }
     },
     {
       "id": "spaced-token",
       "title": "{{ appUrl }} with spaces is not a token, so it is refused as unknown",
       "input": {
-        "context": { "appUrl": "https://moic.app", "appName": "MOIC", "connector": "twilio" },
-        "steps": [{ "title": "t", "detail": "{{ appUrl }}" }]
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "twilio"
+        },
+        "steps": [
+          {
+            "title": "t",
+            "detail": "{{ appUrl }}"
+          }
+        ]
       },
-      "expected": { "refused": "unknown-token" }
+      "expected": {
+        "refused": "unknown-token"
+      }
     },
     {
       "id": "unknown-in-copy",
       "title": "an unknown token inside a copy value is refused too",
       "input": {
-        "context": { "appUrl": "https://moic.app", "appName": "MOIC", "connector": "twilio" },
-        "steps": [{ "title": "t", "detail": "d", "copy": [{ "label": "x", "value": "{{secret}}" }] }]
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "twilio"
+        },
+        "steps": [
+          {
+            "title": "t",
+            "detail": "d",
+            "copy": [
+              {
+                "label": "x",
+                "value": "{{secret}}"
+              }
+            ]
+          }
+        ]
       },
-      "expected": { "refused": "unknown-token" }
+      "expected": {
+        "refused": "unknown-token"
+      }
     },
     {
       "id": "missing-context",
       "title": "a token whose context value is missing is refused, not left empty",
       "input": {
-        "context": { "appName": "MOIC", "connector": "twilio" },
-        "steps": [{ "title": "t", "detail": "{{appUrl}}/hooks" }]
+        "context": {
+          "appName": "MOIC",
+          "connector": "twilio"
+        },
+        "steps": [
+          {
+            "title": "t",
+            "detail": "{{appUrl}}/hooks"
+          }
+        ]
       },
-      "expected": { "refused": "missing-context" }
+      "expected": {
+        "refused": "missing-context"
+      }
     },
     {
       "id": "empty-context",
       "title": "an EMPTY context value is refused the same way",
       "input": {
-        "context": { "appUrl": "https://moic.app", "appName": "", "connector": "twilio" },
-        "steps": [{ "title": "{{appName}}", "detail": "d" }]
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "",
+          "connector": "twilio"
+        },
+        "steps": [
+          {
+            "title": "{{appName}}",
+            "detail": "d"
+          }
+        ]
       },
-      "expected": { "refused": "missing-context" }
+      "expected": {
+        "refused": "missing-context"
+      }
     },
     {
       "id": "unused-missing-is-fine",
       "title": "a missing context value nothing uses is not an error",
       "input": {
-        "context": { "connector": "twilio" },
-        "steps": [{ "title": "Open {{connector}}", "detail": "d" }]
+        "context": {
+          "connector": "twilio"
+        },
+        "steps": [
+          {
+            "title": "Open {{connector}}",
+            "detail": "d"
+          }
+        ]
       },
-      "expected": { "steps": [{ "title": "Open twilio", "detail": "d", "actor": "person", "fields": [] }] }
+      "expected": {
+        "steps": [
+          {
+            "title": "Open twilio",
+            "detail": "d",
+            "actor": "person",
+            "fields": []
+          }
+        ]
+      }
     },
     {
       "id": "no-steps",
       "title": "no steps renders to no steps",
-      "input": { "context": { "appUrl": "https://moic.app", "appName": "MOIC", "connector": "twilio" }, "steps": [] },
-      "expected": { "steps": [] }
+      "input": {
+        "context": {
+          "appUrl": "https://moic.app",
+          "appName": "MOIC",
+          "connector": "twilio"
+        },
+        "steps": []
+      },
+      "expected": {
+        "steps": []
+      }
     }
   ]
 }

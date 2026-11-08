@@ -21,7 +21,10 @@
  */
 import type { SetupStep } from "./seam";
 
-export const SETUP_TOKENS = ["appUrl", "appName", "connector"] as const;
+// The last two (0.15.1) are the HOST's own URLs as it knows them, inserted
+// verbatim: a webhook route and an OAuth callback are wherever the host put
+// them, so no layout is assumed.
+export const SETUP_TOKENS = ["appUrl", "appName", "connector", "webhookUrl", "oauthRedirectUrl"] as const;
 export type SetupToken = (typeof SETUP_TOKENS)[number];
 
 export const SETUP_RENDER_REASONS = ["unknown-token", "missing-context"] as const;

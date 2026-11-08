@@ -15,7 +15,8 @@ namespace ParticleAcademy\Connectors;
  */
 final class Setup
 {
-    public const TOKENS = ['appUrl', 'appName', 'connector'];
+    /** The last two (0.15.1) are the host's own URLs, inserted verbatim. */
+    public const TOKENS = ['appUrl', 'appName', 'connector', 'webhookUrl', 'oauthRedirectUrl'];
 
     public const REASONS = ['unknown-token', 'missing-context'];
 
@@ -56,7 +57,7 @@ final class Setup
             if (! in_array($name, self::TOKENS, true)) {
                 throw new SetupRenderException(
                     'unknown-token',
-                    "setup step text uses {$m[0]}, which is not one of {{appUrl}}, {{appName}}, {{connector}}",
+                    "setup step text uses {$m[0]}, which is not one of {{".implode('}}, {{', self::TOKENS).'}}',
                 );
             }
             $value = $context[$name] ?? null;

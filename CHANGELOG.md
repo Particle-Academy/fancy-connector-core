@@ -6,6 +6,21 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.15.1] - 2026-11-08
+
+### Added
+
+- **Two more setup tokens: `{{webhookUrl}}` and `{{oauthRedirectUrl}}`.**
+  These are the host's own URLs, as the host knows them, inserted verbatim.
+  No URL layout is assumed, because a webhook route and an OAuth callback are
+  wherever the host put them.
+  - The set is closed at five: `SETUP_TOKENS` / `Setup::TOKENS`.
+  - A step naming either with no value supplied is refused as
+    `missing-context`.
+  - Connectors move from the old `{host.webhookUrl}` spelling to these (Fancy,
+    2026-11-08). The old spelling is not a token here and passes through as
+    text.
+
 ## [0.15.0] - 2026-11-08
 
 ### Added
