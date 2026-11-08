@@ -6,6 +6,33 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.15.0] - 2026-11-08
+
+### Added
+
+- **`SetupStep` says who does each step and what it yields.** New optional
+  fields, in both runtimes:
+  - `actor`: `person` (the default when absent) or `agent`; `SETUP_ACTORS` /
+    `Setup::ACTORS` ship it as data.
+  - `prompt`: what an agent is asked to do. Required for an agent step.
+  - `copy`: `[{label, value}]` values the person pastes somewhere, such as a
+    callback URL.
+  - `fields`: the credential keys the step yields.
+  - `done`: how the person knows the step is done.
+
+  PHP's `SetupStep` gains `fromArray()` / `toArray()`. Absent stays absent:
+  a field nobody wrote is omitted, never null.
+- **`renderSetup` / `Setup::render`: a connector's steps rendered for one
+  app.** `{{appUrl}}`, `{{appName}}` and `{{connector}}` are filled in every
+  text a person or an agent reads.
+  - Any other `{{...}}` is refused as `unknown-token`, so a person never
+    pastes a literal brace into a provider console.
+  - A token with no value, or an empty one, is refused as `missing-context`,
+    so a callback never becomes `/hooks/twilio`.
+  - `appUrl` loses one trailing slash first, and a value is never expanded
+    again.
+  - Held to `fixtures/setup-render/cases.json` in both runtimes.
+
 ## [0.14.0] - 2026-11-07
 
 ### Added

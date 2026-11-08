@@ -48,6 +48,7 @@ export * from "./probe";
 export * from "./pubsub-push";
 export * from "./render";
 export * from "./seam";
+export * from "./setup";
 export * from "./text";
 export * from "./trigger";
 export * from "./webhook";

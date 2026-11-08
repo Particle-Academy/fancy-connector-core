@@ -96,11 +96,25 @@ export type CredentialField = {
   placeholder?: string;
 };
 
+/** Who performs a setup step. Ships as data: a host mirrors it across JSON. */
+export const SETUP_ACTORS = ["person", "agent"] as const;
+export type SetupActor = (typeof SETUP_ACTORS)[number];
+
 export type SetupStep = {
   title: string;
   /** The step, and the trap in it. A step with no trap named is usually wrong. */
   detail: string;
   url?: string;
+  /** Who does it. Absent means `person` (0.15.0). */
+  actor?: SetupActor;
+  /** What an agent is asked to do. Required when `actor` is `agent`. */
+  prompt?: string;
+  /** Values the person pastes somewhere, e.g. the callback URL. */
+  copy?: { label: string; value: string }[];
+  /** The credential keys this step yields. */
+  fields?: string[];
+  /** How the person knows the step is done. */
+  done?: string;
 };
 
 /**
