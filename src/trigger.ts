@@ -38,8 +38,15 @@ import { header, isSharedTokenScheme, verifyHmac, verifySharedToken } from "./we
  */
 export type DeliveryMechanism = "webhook" | "subscription" | "poll" | "pubsub" | "stream";
 
-/** See `TriggerDescriptor.route`. `path` is dotted; `[]` means every element. */
-export type DeliveryRoute = { by: string; path: string };
+/**
+ * See `TriggerDescriptor.route`. `path` is dotted; `[]` means every element.
+ *
+ * A LIST of paths (0.15.2) is a union: the route keys are every value found
+ * at any of them. Inbound email needs it — the address a message was received
+ * FOR is in To, or Cc, or only in the `Received` header's `for` clause (a Bcc
+ * or a forward), and routing by To alone silently drops the other two.
+ */
+export type DeliveryRoute = { by: string; path: string | readonly string[] };
 
 export type TriggerDescriptor = {
   service: string;

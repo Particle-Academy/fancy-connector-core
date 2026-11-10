@@ -6,6 +6,18 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [0.15.2] - 2026-11-10
+
+### Changed
+
+- **`DeliveryRoute.path` takes a LIST of paths as well as one.** A list is a
+  union: the route keys are every value found at any of them. This is for
+  inbound email, where the address a message was received FOR is in To, in
+  Cc, or only in the `Received` header's `for` clause (a Bcc or a
+  forward). Routing by To alone would silently drop the other two.
+  - A single dotted path keeps its meaning exactly.
+  - TypeScript only; PHP declares no route type.
+
 ## [0.15.1] - 2026-11-08
 
 ### Added
