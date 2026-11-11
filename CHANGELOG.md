@@ -687,6 +687,13 @@ Additive only. **What a consumer must DO: nothing** — see each entry.
 
 ## [Unreleased]
 
+### Changed
+
+- **Releases need a lab-run certificate.** `publish.yml` gains a read-only
+  `lab-certificate` job that every publishing job needs: a tag is published only
+  when the fancy-labs lab has certified that exact version and commit. Consumers
+  do nothing; this changes how releases are cut, not what the package does.
+
 ## [0.2.0] — unreleased
 
 The reference consumer migrated five adapters onto `0.1.0`, ran its acceptance
@@ -760,7 +767,6 @@ because nothing fails.
   became never-true, so every credential field would have rendered as shared.
   (PHP had this for free — an enum is runtime data, and `tryFrom` fails loudly on
   a value nobody serves any more.)
-
 
 ## [0.1.0] — unreleased
 
