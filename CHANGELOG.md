@@ -6,6 +6,16 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
+## [Unreleased]
+
+### Changed
+
+- **Releases need a lab-run certificate.** `publish.yml` gains a read-only
+  `lab-certificate` job that every publishing job needs: a tag is published only
+  when the fancy-labs lab has certified that exact version and commit. Consumers
+  do nothing; this changes how releases are cut, not what the package does.
+- Rebranded the display name to Fancy Dev Kit (README and package description). Package names, the npm scope, URLs and the `fancy-ui` MCP id are unchanged.
+
 ## [0.15.2] - 2026-11-10
 
 ### Changed
@@ -684,15 +694,6 @@ Additive only. **What a consumer must DO: nothing** — see each entry.
 
   Found by a consumer's conformance fixture disagreeing with the core on its
   first run, with a reproduction.
-
-## [Unreleased]
-
-### Changed
-
-- **Releases need a lab-run certificate.** `publish.yml` gains a read-only
-  `lab-certificate` job that every publishing job needs: a tag is published only
-  when the fancy-labs lab has certified that exact version and commit. Consumers
-  do nothing; this changes how releases are cut, not what the package does.
 
 ## [0.2.0] — unreleased
 
