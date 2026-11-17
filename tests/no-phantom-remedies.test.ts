@@ -52,7 +52,7 @@ test("no source or doc names a command, package or script that does not exist", 
       }
     }
   }
-  for (const doc of ["README.md", "AGENTS.md"]) {
+  for (const doc of ["README.md", "AGENTS.md", "CONTRIBUTING.md"]) {
     const text = readFileSync(join(ROOT, doc), "utf8");
     for (const [pattern, why] of PHANTOMS) {
       if (pattern.test(text)) offenders.push(`${doc}: ${why}`);

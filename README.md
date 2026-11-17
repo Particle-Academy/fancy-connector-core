@@ -23,6 +23,13 @@ composer require particle-academy/fancy-connector-core
 
 ---
 
+<!-- fancy-agents-note:start -->
+> **For agents.** Every Fancy package, this one included, is listed on the
+> Fancy MCP catalog server at `https://ui.particle.academy/mcp` (streamable HTTP, no API key;
+> MCP id `fancy-ui`), with install commands and docs. How an agent installs
+> and uses this package is in [AGENTS.md](https://github.com/Particle-Academy/fancy-connector-core/blob/main/AGENTS.md).
+<!-- fancy-agents-note:end -->
+
 ## It owns the wire. It never owns a gate.
 
 Approval, liveness, the approved-bytes comparison, consent, second review and
@@ -225,8 +232,9 @@ entirely. That is the whole argument.
 
 ## Documentation
 
-- [`AGENTS.md`](./AGENTS.md) — the invariants, the traps, and what a change here
-  breaks.
+- [`AGENTS.md`](./AGENTS.md) — how an agent installs and uses this package.
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — the invariants, the traps, and what a
+  change here breaks.
 - `RULES.md` in [`Fancy-Friends/weaver.agi`](https://github.com/Fancy-Friends/weaver.agi)
   — the estate every connector is generated from (one definition → four
   packages), its invariants, and the process rules this core follows since it

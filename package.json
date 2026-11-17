@@ -29,7 +29,8 @@
         "dist",
         "README.md",
         "CHANGELOG.md",
-        "LICENSE"
+        "LICENSE",
+        "AGENTS.md"
     ],
     "scripts": {
         "build": "tsup",
