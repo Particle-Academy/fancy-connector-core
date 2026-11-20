@@ -1,0 +1,26 @@
+{
+  "format": "eml-attachment",
+  "from": {
+    "name": "Jérôme Client",
+    "address": "jerome@client.example"
+  },
+  "date": {
+    "raw": "Mon, 17 Nov 2025 09:14:03 -0500",
+    "local": "2025-11-17T09:14:03",
+    "iso": "2025-11-17T09:14:03-05:00"
+  },
+  "subject": "Proposal for Q1",
+  "to": [
+    {
+      "name": "Owner",
+      "address": "owner@alias.example"
+    },
+    {
+      "name": null,
+      "address": "ops@client.example"
+    }
+  ],
+  "cc": [],
+  "body": "Hi,\n\nProposal attached.",
+  "note": "See attached."
+}

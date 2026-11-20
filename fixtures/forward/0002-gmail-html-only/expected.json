@@ -1,0 +1,22 @@
+{
+  "format": "gmail",
+  "from": {
+    "name": "Jane Client",
+    "address": "jane@client.example"
+  },
+  "date": {
+    "raw": "Mon, Nov 17, 2025 at 9:14 AM",
+    "local": "2025-11-17T09:14",
+    "iso": null
+  },
+  "subject": "Proposal & pricing",
+  "to": [
+    {
+      "name": null,
+      "address": "owner@alias.example"
+    }
+  ],
+  "cc": [],
+  "body": "Hi,\n\nPricing attached.",
+  "note": "See below"
+}

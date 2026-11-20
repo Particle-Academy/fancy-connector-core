@@ -1,0 +1,15 @@
+From: Owner <owner@alias.example>
+To: inbox@moic.example
+Subject: FW: Invoice 42
+Date: Thu, 20 Nov 2025 06:00:00 +0000
+Message-ID: <outer@alias.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+-----Original Message-----
+From: Jane Client [mailto:jane@client.example]
+Sent: Monday, November 17, 2025 2:05 PM
+To: owner@alias.example
+Subject: Invoice 42
+
+Invoice attached.

@@ -54,6 +54,12 @@ on it, and `install-instructions` gives exact install commands.
   includes `RENDERER_VERSION`. Threads post with `postChain(...)`.
 - **Probes** call the real API with an invalid credential and require an
   auth-shaped refusal; **drift** reports `clean` | `drifted` | `unchecked`.
+- **A hand-forwarded email:** `parseForward({ raw })` or `({ text, html })`
+  (PHP `Forward::parse(raw: $eml)` or `(text: …, html: …)`). It returns the
+  ORIGINAL message: `format`, `from` {name, address}, `date` {raw, local, iso},
+  `subject`, `to`, `cc`, `body`, `note`. It reads Gmail, Outlook, Apple Mail
+  and a forward attached as `.eml`. If none is recognised, `format` is
+  `"none"` and every other field is null.
 
 The README walks through each with examples. The full declaration surface
 (`ProviderAdapter`, `Connector`, triggers, leases, webhook verification) is in
@@ -72,6 +78,13 @@ The README walks through each with examples. The full declaration surface
 - **String unions cross JSON boundaries unchecked.** Validate against the
   exported arrays (`SANDBOX_KINDS`, `CREDENTIAL_SCOPES`, `PROBLEM_SEVERITIES`,
   `CANONICAL_METRICS`); in PHP, `SandboxKind::tryFrom($value)`.
+- **A forward block is text anyone can type.** Believe `parseForward`'s `from`
+  only when the OUTER sender is one of your own users, by a verified address.
+  When `format` is `"none"`, keep the outer sender, and never infer a name
+  from a domain.
+- **`date.local` is the forwarder's wall-clock time, with no zone.** The
+  client printed no offset. Only `date.iso` carries one, and in practice only
+  an attached `.eml` has it.
 - **A probe that is offline is `skip`, never `fail`. A 2xx probe is a failure.**
 - **A vendored `_connector` copy must not be reformatted.** Exclude it from Pint
   or any JS/TS formatter; its check is byte-for-byte.

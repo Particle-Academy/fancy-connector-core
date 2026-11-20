@@ -1,0 +1,26 @@
+{
+  "format": "outlook",
+  "from": {
+    "name": "Client, Jane",
+    "address": "jane@client.example"
+  },
+  "date": {
+    "raw": "Monday, November 17, 2025 9:14 AM",
+    "local": "2025-11-17T09:14",
+    "iso": null
+  },
+  "subject": "RE: Contract",
+  "to": [
+    {
+      "name": "Owner",
+      "address": "owner@alias.example"
+    },
+    {
+      "name": "Inbox",
+      "address": "inbox@moic.example"
+    }
+  ],
+  "cc": [],
+  "body": "Signed copy attached.\n\n-- \nJane",
+  "note": "Please add to the CRM."
+}

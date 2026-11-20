@@ -1,0 +1,31 @@
+{
+  "format": "gmail",
+  "from": {
+    "name": "Jane Client",
+    "address": "jane@client.example"
+  },
+  "date": {
+    "raw": "Mon, Nov 17, 2025 at 9:14 AM",
+    "local": "2025-11-17T09:14",
+    "iso": null
+  },
+  "subject": "Proposal for Q1",
+  "to": [
+    {
+      "name": "Owner Alias",
+      "address": "owner@alias.example"
+    }
+  ],
+  "cc": [
+    {
+      "name": "Sam Partner",
+      "address": "sam@client.example"
+    },
+    {
+      "name": null,
+      "address": "ops@client.example"
+    }
+  ],
+  "body": "Hi,\n\nCould you send the proposal by Friday?\n\nJane",
+  "note": "FYI, this came in this morning."
+}

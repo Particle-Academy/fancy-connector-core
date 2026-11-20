@@ -1,0 +1,22 @@
+{
+  "format": "gmail",
+  "from": {
+    "name": "Sam Partner",
+    "address": "sam@client.example"
+  },
+  "date": {
+    "raw": "Tue, Nov 18, 2025 at 8:00 AM",
+    "local": "2025-11-18T08:00",
+    "iso": null
+  },
+  "subject": "Fwd: Proposal for Q1",
+  "to": [
+    {
+      "name": null,
+      "address": "owner@alias.example"
+    }
+  ],
+  "cc": [],
+  "body": "See Jane's note.\n\n---------- Forwarded message ---------\nFrom: Jane Client <jane@client.example>\nDate: Mon, Nov 17, 2025 at 9:14 AM\nSubject: Proposal for Q1\nTo: <sam@client.example>\n\n\nHi Sam.",
+  "note": null
+}
