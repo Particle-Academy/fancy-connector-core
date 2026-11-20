@@ -15,3 +15,6 @@
 # The MIME corpus is BYTES: one case exists to prove CRLF is handled, and a
 # normalised checkout would turn it into the LF case it already has.
 fixtures/mime/**/message.eml -text
+
+# The forward corpus is BYTES too: a case is the message exactly as a client wrote it.
+fixtures/forward/**/message.eml -text

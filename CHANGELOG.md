@@ -21,6 +21,44 @@ version number is not a promise it can keep yet; the entries below are.
 - Rebranded the display name to Fancy Dev Kit (README and package description). Package names, the npm scope, URLs and the `fancy-ui` MCP id are unchanged.
 - **Docs:** `AGENTS.md` is now the guide to using this package (install, its entries on the Fancy MCP catalog server, API essentials, traps), and it ships in the package. The contributor notes it held moved to `CONTRIBUTING.md`, and `CLAUDE.md` is now a symlink to it. The README points to the MCP server and to `AGENTS.md`. No code changed; nothing to do.
 
+## [0.16.0] - 2026-11-20
+
+### Added
+
+- **`parseForward` / `Forward::parse`: the ORIGINAL message inside a
+  hand-forwarded email.** A forward arrives From the forwarder, with the real
+  sender written as text in the body. Read naively, the forwarder becomes the
+  sender. This reads the block the mail client wrote.
+  - **Input:** raw MIME, or the text and html parts a provider read returns.
+    The text part wins when there is one.
+  - **Output:** `format`, `from` {name, address}, `date` {raw, local, iso},
+    `subject`, `to`, `cc`, `body` (below the block) and `note` (the
+    forwarder's own words above it).
+  - **Formats:**
+    - `gmail`;
+    - `outlook` (desktop and web write the same block: an underscore rule, or
+      `-----Original Message-----`, including `[mailto:…]` and a name-only
+      `From:`);
+    - `apple-mail`;
+    - `eml-attachment` (a `message/rfc822` part, whose real headers are read);
+    - `none`.
+    - English labels only.
+  - **`none` means every other field is null, never a guess.** That covers no
+    forward found, and a separator with no `From:` below it.
+  - **The FIRST block decides.** A nested forward stays in the body.
+  - **Dates:** `local` is the wall-clock time printed in the forwarder's zone.
+    `iso` is set only when the date carries a numeric offset.
+  - **Written from scratch, linear in the input, and held to an authored
+    corpus** (`fixtures/forward/`, 11 cases) in both runtimes. Hostile inputs
+    are time-bounded, and whitespace and lowercasing are ASCII in both, so the
+    two runtimes cannot split on Unicode.
+  - **The samples are CONSTRUCTED** from each client's documented layout, not
+    taken from real mailboxes. Real forwards from the consumer will be added
+    as they arrive.
+  - **TRUST:** a forward block is text anyone can type. Believe `from` only
+    when the outer sender is the host's own verified user.
+  - **Not in this release:** the Python embed. It follows separately.
+
 ## [0.15.2] - 2026-11-10
 
 ### Changed
