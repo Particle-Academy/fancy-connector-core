@@ -1,0 +1,29 @@
+From: Owner <owner@alias.example>
+To: inbox@moic.example
+Subject: Fwd: Proposal for Q1
+Date: Thu, 20 Nov 2025 06:00:00 +0000
+Message-ID: <outer@alias.example>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="m1"
+
+--m1
+Content-Type: text/plain; charset=utf-8
+
+See attached.
+
+--m1
+Content-Type: message/rfc822
+Content-Disposition: attachment; filename="Proposal.eml"
+
+From: =?UTF-8?B?SsOpcsO0bWUgQ2xpZW50?= <jerome@client.example>
+To: Owner <owner@alias.example>, ops@client.example
+Date: Mon, 17 Nov 2025 09:14:03 -0500
+Subject: Proposal for Q1
+Message-ID: <abc@client.example>
+Content-Type: text/plain; charset=utf-8
+
+Hi,
+
+Proposal attached.
+
+--m1--

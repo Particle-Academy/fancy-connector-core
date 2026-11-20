@@ -1,0 +1,25 @@
+From: Owner <owner@alias.example>
+To: inbox@moic.example
+Subject: Fwd: Fwd: Proposal for Q1
+Date: Thu, 20 Nov 2025 06:00:00 +0000
+Message-ID: <outer@alias.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+---------- Forwarded message ---------
+From: Sam Partner <sam@client.example>
+Date: Tue, Nov 18, 2025 at 8:00 AM
+Subject: Fwd: Proposal for Q1
+To: <owner@alias.example>
+
+
+See Jane's note.
+
+---------- Forwarded message ---------
+From: Jane Client <jane@client.example>
+Date: Mon, Nov 17, 2025 at 9:14 AM
+Subject: Proposal for Q1
+To: <sam@client.example>
+
+
+Hi Sam.

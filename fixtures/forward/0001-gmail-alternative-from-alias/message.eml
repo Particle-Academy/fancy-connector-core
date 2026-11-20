@@ -1,0 +1,32 @@
+From: Owner <owner@alias.example>
+To: inbox@moic.example
+Subject: Fwd: Proposal for Q1
+Date: Thu, 20 Nov 2025 06:00:00 +0000
+Message-ID: <outer@alias.example>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1"
+
+--b1
+Content-Type: text/plain; charset=utf-8
+
+FYI, this came in this morning.
+
+---------- Forwarded message ---------
+From: Jane Client <jane@client.example>
+Date: Mon, Nov 17, 2025 at 9:14 AM
+Subject: Proposal for Q1
+To: Owner Alias <owner@alias.example>
+Cc: Sam Partner <sam@client.example>, ops@client.example
+
+
+Hi,
+
+Could you send the proposal by Friday?
+
+Jane
+
+--b1
+Content-Type: text/html; charset=utf-8
+
+<div>this html part is NOT read when a text part exists</div>
+--b1--

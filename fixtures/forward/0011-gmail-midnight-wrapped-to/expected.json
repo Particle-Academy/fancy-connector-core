@@ -1,0 +1,30 @@
+{
+  "format": "gmail",
+  "from": {
+    "name": "Jane Client",
+    "address": "jane@client.example"
+  },
+  "date": {
+    "raw": "Wed, Nov 19, 2025 at 12:05 AM",
+    "local": "2025-11-19T00:05",
+    "iso": null
+  },
+  "subject": "Late night",
+  "to": [
+    {
+      "name": "Owner",
+      "address": "owner@alias.example"
+    },
+    {
+      "name": "Sam Partner",
+      "address": "sam@client.example"
+    },
+    {
+      "name": "Ops",
+      "address": "ops@client.example"
+    }
+  ],
+  "cc": [],
+  "body": "Body.",
+  "note": null
+}

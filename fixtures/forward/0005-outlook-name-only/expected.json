@@ -1,0 +1,22 @@
+{
+  "format": "outlook",
+  "from": {
+    "name": "Jane Client",
+    "address": null
+  },
+  "date": {
+    "raw": "Tuesday, November 18, 2025 10:00 AM",
+    "local": "2025-11-18T10:00",
+    "iso": null
+  },
+  "subject": "Meeting",
+  "to": [
+    {
+      "name": "Owner",
+      "address": null
+    }
+  ],
+  "cc": [],
+  "body": "Tuesday works.",
+  "note": null
+}

@@ -41,6 +41,7 @@ export * from "./jwt";
 export * from "./lease";
 export * from "./metrics";
 export * from "./mime";
+export * from "./forward";
 export * from "./form-field-json";
 export * from "./mode";
 export * from "./oidc-delivery";

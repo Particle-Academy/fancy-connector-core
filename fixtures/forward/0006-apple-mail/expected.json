@@ -1,0 +1,27 @@
+{
+  "format": "apple-mail",
+  "from": {
+    "name": "Jane Client",
+    "address": "jane@client.example"
+  },
+  "date": {
+    "raw": "November 17, 2025 at 9:14:03 AM EST",
+    "local": "2025-11-17T09:14:03",
+    "iso": null
+  },
+  "subject": "Re: Proposal for Q1",
+  "to": [
+    {
+      "name": "Owner",
+      "address": "owner@alias.example"
+    }
+  ],
+  "cc": [
+    {
+      "name": "Partner, Sam",
+      "address": "sam@client.example"
+    }
+  ],
+  "body": "Looks good to me.\n\nJane",
+  "note": "Forwarding for the record."
+}

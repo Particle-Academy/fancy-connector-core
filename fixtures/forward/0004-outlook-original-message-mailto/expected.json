@@ -1,0 +1,22 @@
+{
+  "format": "outlook",
+  "from": {
+    "name": "Jane Client",
+    "address": "jane@client.example"
+  },
+  "date": {
+    "raw": "Monday, November 17, 2025 2:05 PM",
+    "local": "2025-11-17T14:05",
+    "iso": null
+  },
+  "subject": "Invoice 42",
+  "to": [
+    {
+      "name": null,
+      "address": "owner@alias.example"
+    }
+  ],
+  "cc": [],
+  "body": "Invoice attached.",
+  "note": null
+}

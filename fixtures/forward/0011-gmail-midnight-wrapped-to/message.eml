@@ -1,0 +1,16 @@
+From: Owner <owner@alias.example>
+To: inbox@moic.example
+Subject: Fwd: Late night
+Date: Thu, 20 Nov 2025 06:00:00 +0000
+Message-ID: <outer@alias.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+---------- Forwarded message ---------
+From: Jane Client <jane@client.example>
+Date: Wed, Nov 19, 2025 at 12:05 AM
+Subject: Late night
+To: Owner <owner@alias.example>, Sam Partner <sam@client.example>,
+ Ops <ops@client.example>
+
+Body.
