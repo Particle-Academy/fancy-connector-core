@@ -21,6 +21,20 @@ version number is not a promise it can keep yet; the entries below are.
 - Rebranded the display name to Fancy Dev Kit (README and package description). Package names, the npm scope, URLs and the `fancy-ui` MCP id are unchanged.
 - **Docs:** `AGENTS.md` is now the guide to using this package (install, its entries on the Fancy MCP catalog server, API essentials, traps), and it ships in the package. The contributor notes it held moved to `CONTRIBUTING.md`, and `CLAUDE.md` is now a symlink to it. The README points to the MCP server and to `AGENTS.md`. No code changed; nothing to do.
 
+## [0.16.1] - 2026-11-20
+
+### Fixed
+
+- **PHP fake mode now seeds a non-ASCII config exactly as TypeScript and
+  Python do.** `FakeValues::seed` hashed UTF-8 BYTES where both twins hash
+  UTF-16 CODE UNITS.
+  - **ASCII was unaffected:** the two agree byte for unit, which is why it
+    went unnoticed until gmail send-as put `Zoë` in a config value.
+  - **Past ASCII:** a faked call in PHP returned different ids from its twins.
+  - **Real calls are unaffected.** This is fake-mode data only.
+  - **Pinned:** `php/tests/FakeSeedUnicodeTest.php`, against the values both
+    twins compute independently, including a surrogate pair.
+
 ## [0.16.0] - 2026-11-20
 
 ### Added
