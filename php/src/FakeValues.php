@@ -86,12 +86,55 @@ final class FakeValues
 
         $hash = 0x811C9DC5;
 
-        for ($i = 0, $length = strlen($text); $i < $length; $i++) {
-            $hash ^= ord($text[$i]);
+        // UTF-16 CODE UNITS, as both twins hash (`charCodeAt`; `_utf16_units`).
+        // Hashing UTF-8 bytes agreed for ASCII only, so the first non-ASCII
+        // config value (gmail's `Zoë`) seeded differently here (0.16.1).
+        foreach (self::utf16Units($text) as $unit) {
+            $hash ^= $unit;
             $hash = ($hash * 0x01000193) & self::MASK;
         }
 
         return $hash;
+    }
+
+    /**
+     * A UTF-8 string's UTF-16 code units, without mbstring. A code point above
+     * U+FFFF is a surrogate pair, as in JavaScript. A malformed byte is taken
+     * as itself, since a string that reaches here from JSON is valid UTF-8.
+     *
+     * @return list<int>
+     */
+    private static function utf16Units(string $text): array
+    {
+        $units = [];
+        $length = strlen($text);
+
+        for ($i = 0; $i < $length;) {
+            $b = ord($text[$i]);
+
+            if ($b < 0x80) {
+                [$cp, $n] = [$b, 1];
+            } elseif (($b & 0xE0) === 0xC0 && $i + 1 < $length) {
+                [$cp, $n] = [(($b & 0x1F) << 6) | (ord($text[$i + 1]) & 0x3F), 2];
+            } elseif (($b & 0xF0) === 0xE0 && $i + 2 < $length) {
+                [$cp, $n] = [(($b & 0x0F) << 12) | ((ord($text[$i + 1]) & 0x3F) << 6) | (ord($text[$i + 2]) & 0x3F), 3];
+            } elseif (($b & 0xF8) === 0xF0 && $i + 3 < $length) {
+                [$cp, $n] = [(($b & 0x07) << 18) | ((ord($text[$i + 1]) & 0x3F) << 12) | ((ord($text[$i + 2]) & 0x3F) << 6) | (ord($text[$i + 3]) & 0x3F), 4];
+            } else {
+                [$cp, $n] = [$b, 1];
+            }
+            $i += $n;
+
+            if ($cp >= 0x10000) {
+                $cp -= 0x10000;
+                $units[] = 0xD800 | ($cp >> 10);
+                $units[] = 0xDC00 | ($cp & 0x3FF);
+            } else {
+                $units[] = $cp;
+            }
+        }
+
+        return $units;
     }
 
     /** A stable id with the provider's usual prefix: `id('ch')` gives `ch_fake_1a2b3c…`. */
