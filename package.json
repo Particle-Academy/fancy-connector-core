@@ -41,7 +41,7 @@
         "prepublishOnly": "tsup"
     },
     "devDependencies": {
-        "@particle-academy/fancy-conformance": "0.26.0",
+        "@particle-academy/fancy-conformance": "0.62.0",
         "@types/node": "^22",
         "tsup": "^8.5.0",
         "tsx": "^4.19.0",

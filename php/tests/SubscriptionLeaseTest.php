@@ -17,7 +17,7 @@ use ParticleAcademy\Connectors\SubscriptionLease;
  * drift from the table. Run through the package's own `runTable`, never a
  * transcription of its rows. Mirrors `tests/subscription-lease.test.ts`.
  */
-const LEASE_SUITE_PINNED = '0.26.0';
+const LEASE_SUITE_PINNED = '0.62.0';
 const LEASE_SUITE = 'shared/subscription-lease';
 
 /**

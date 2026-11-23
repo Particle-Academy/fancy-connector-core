@@ -27,7 +27,7 @@ import { type ConformanceCase, formatSummary, loadSuite, runTable, suiteVersion 
 import { ConnectorConfigError, leaseAction, leaseRenewAt, leaseState, subscriptionLease } from "../src/index";
 
 /** The pin. "We are on an old table" must be visible in the output, not inferred from a manifest range. */
-const PINNED = "0.26.0";
+const PINNED = "0.62.0";
 const SUITE = "shared/subscription-lease";
 
 type Input = { expiresAt: string; renewBeforeSeconds: number; renewOperation: string; now: string };
