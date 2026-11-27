@@ -6,7 +6,37 @@ All notable changes to `fancy-connector-core` are documented here, in
 **This package is pre-1.0, so breaking changes land in MINOR releases.** The
 version number is not a promise it can keep yet; the entries below are.
 
-## [Unreleased]
+## [0.17.0] - 2026-11-27
+
+### Added
+
+- **Outgoing webhooks, signed the Standard Webhooks way:** `signWebhook` /
+  `WebhookSigner::sign`, and `deliverWebhook` / `WebhookSigner::deliver`. They
+  are for a host pushing its OWN events to its own subscribers, and they mirror
+  the receiving `verifyHmac` that has existed since 0.9.0.
+  - **Signing:** `v1`, HMAC-SHA256 over `id.timestamp.body`, keyed by the bytes
+    after `whsec_`. The headers are `webhook-id`, `webhook-timestamp` and
+    `webhook-signature: v1,<base64>`. During a rotation there is one signature
+    per secret, space-delimited.
+  - **The body is signed byte for byte as given.** Send exactly what was signed.
+  - **Refused by name:**
+    - `no-secret`;
+    - `bad-secret` (no `whsec_`, or not base64);
+    - `bad-id` (empty, CR or LF);
+    - `bad-timestamp` (not whole seconds; a millisecond value is refused);
+    - and, on delivery, `header-collision` for a supplied `webhook-*` header.
+  - **Delivery** POSTs through the host's transport and RETURNS the core's
+    `DeliveryOutcome`, because the host owns the retry schedule.
+    - 429 and 5xx are retried, and a 4xx is not.
+    - A timeout is NOT retried unless `idempotent` is set, meaning this
+      subscriber dedupes on `webhook-id`.
+    - A later attempt on the host's own schedule should pass a new timestamp.
+  - **Held to `fixtures/webhook-sign/cases.json` in both runtimes,** anchored to
+    Standard Webhooks' own published vectors: a JSON payload, and a binary one
+    taken from the Go library. A round trip through our own verifier accepts
+    every signature of a rotation and rejects a changed body.
+  - **Not in this release:** asymmetric `v2a` (ed25519) signatures, and the
+    Python embed.
 
 ### Changed
 

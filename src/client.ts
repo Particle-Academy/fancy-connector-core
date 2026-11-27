@@ -51,6 +51,7 @@ import {
   type ConnectorErrorContext,
 } from "./errors";
 import { fakeRequest, type ConnectorFaker } from "./faker";
+import { signWebhook, type WebhookToSign } from "./webhook-sign";
 import type { ConnectorMode, RequestedMode, SandboxKind } from "./mode";
 import {
   resolveConnection,
@@ -560,4 +561,73 @@ function readString(config: Record<string, unknown>, key: string): string | null
   const value = config[key];
 
   return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+/* ── Outgoing webhooks ─────────────────────────────────────────────────── */
+
+export type OutgoingWebhook = Omit<WebhookToSign, "body"> & {
+  /** The subscriber's URL. */
+  url: string;
+  /** The exact bytes to send and sign. */
+  body: string;
+  /** Default `application/json`. */
+  contentType?: string;
+  /** Extra headers. A `webhook-*` signed header is refused, in any case. */
+  headers?: Record<string, string>;
+  /**
+   * Whether THIS subscriber makes a repeat harmless, by deduping on
+   * `webhook-id` (Standard Webhooks tells receivers to). Default false: a
+   * timeout is then not retried, because the subscriber may already have acted.
+   */
+  idempotent?: boolean;
+  attempts?: number;
+  transport?: Transport;
+  /** Injected so tests do not wait. */
+  sleep?: (ms: number) => Promise<void>;
+};
+
+const SIGNED_HEADERS = ["webhook-id", "webhook-timestamp", "webhook-signature"];
+
+/**
+ * Sign and POST one outgoing webhook, classified exactly as a connector call is
+ * (0.17.0). It returns the `DeliveryOutcome` rather than throwing, because the
+ * host owns the retry SCHEDULE: a failed delivery is a fact to store and act on.
+ *
+ * Retries inside one call re-send the same signed request. A later attempt on
+ * the host's schedule passes a NEW timestamp, so the receiver's tolerance window
+ * is met. Standard Webhooks says the attempt's timestamp changes per attempt.
+ */
+export async function deliverWebhook(webhook: OutgoingWebhook): Promise<DeliveryOutcome<TransportResponse>> {
+  const ctx: ConnectorErrorContext = { service: "webhook", operation: "deliver" };
+  const headers: Record<string, string> = { "content-type": webhook.contentType ?? "application/json" };
+
+  for (const [name, value] of Object.entries(webhook.headers ?? {})) {
+    if (SIGNED_HEADERS.includes(name.toLowerCase())) {
+      throw new ConnectorConfigError(
+        `webhook delivery refused (header-collision): "${name}" is set by the signature and cannot be supplied`,
+        ctx,
+      );
+    }
+    headers[name.toLowerCase() === "content-type" ? "content-type" : name] = value;
+  }
+
+  Object.assign(headers, await signWebhook(webhook));
+
+  const request: PreparedRequest = { method: "POST", url: webhook.url, headers, body: webhook.body };
+  const send = webhook.transport ?? registeredTransport ?? fetchTransport;
+
+  return deliver<TransportResponse>(
+    async () => {
+      let response: TransportResponse;
+      try {
+        response = await send({ ...request, headers: { ...request.headers } });
+      } catch (cause) {
+        throw classifyThrown(cause, ctx);
+      }
+      if (response.status < 400) return response;
+      throw classifyHttp(response.status, ctx, response.body, readRetryAfter(response.headers));
+    },
+    { ...DEFAULT_RETRY, attempts: webhook.attempts ?? DEFAULT_RETRY.attempts, idempotent: webhook.idempotent ?? false },
+    webhook.sleep,
+  );
 }

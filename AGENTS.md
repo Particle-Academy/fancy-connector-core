@@ -54,6 +54,13 @@ on it, and `install-instructions` gives exact install commands.
   includes `RENDERER_VERSION`. Threads post with `postChain(...)`.
 - **Probes** call the real API with an invalid credential and require an
   auth-shaped refusal; **drift** reports `clean` | `drifted` | `unchecked`.
+- **Your own outgoing webhooks:**
+  - `deliverWebhook({ url, secrets, id, timestamp, body })` signs and POSTs one
+    event, Standard Webhooks style, and returns a `DeliveryOutcome`. PHP:
+    `WebhookSigner::deliver(...)`.
+  - `signWebhook(...)` / `WebhookSigner::sign(...)` gives only the three headers.
+  - `timestamp` is whole SECONDS, and `secrets` are `whsec_` values.
+  - Set `idempotent: true` only for a subscriber that dedupes on `webhook-id`.
 - **A hand-forwarded email:** `parseForward({ raw })` or `({ text, html })`
   (PHP `Forward::parse(raw: $eml)` or `(text: …, html: …)`). It returns the
   ORIGINAL message: `format`, `from` {name, address}, `date` {raw, local, iso},
